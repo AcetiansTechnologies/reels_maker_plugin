@@ -16,5 +16,9 @@ public class ShowToastActivity extends Activity {
         btn.setOnClickListener(v ->
                 Toast.makeText(this, "Toast from Native Screen", Toast.LENGTH_SHORT).show()
         );
+        findViewById(R.id.imageViewBtn).setOnClickListener(v ->
+                Toast.makeText(this, "Image Clicked", Toast.LENGTH_SHORT).show()
+        );
+
     }
 }

@@ -9,6 +9,12 @@
         android:id="@+id/btnShowToast"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Show Toast" />
 
+        android:text="Show Toast" />
+    <ImageView
+        android:id="@+id/imageViewBtn"
+
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:src="@drawable/user"/>
 </LinearLayout>
