@@ -1,11 +1,35 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.native_toast">
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false" />
 
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
     <application>
+        <activity
+            android:name=".GalleryActivity"
+            android:theme="@style/PluginAppTheme"
 
+            android:exported="false" />
+        <activity
+            android:name=".CameraActivity"
+            android:theme="@style/PluginAppTheme"
+
+            android:exported="false" />
+        <activity
+            android:name=".CameraOptionsScreen"
+            android:theme="@style/PluginAppTheme"
+
+            android:exported="false" />
         <activity
             android:name=".ShowToastActivity"
             android:exported="false" />
+
+
 
     </application>
 

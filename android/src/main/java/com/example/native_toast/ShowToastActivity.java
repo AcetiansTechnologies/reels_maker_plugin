@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.Toast;
+import android.content.Intent;
+
 
 public class ShowToastActivity extends Activity {
 
@@ -19,6 +21,11 @@ public class ShowToastActivity extends Activity {
         findViewById(R.id.imageViewBtn).setOnClickListener(v ->
                 Toast.makeText(this, "Image Clicked", Toast.LENGTH_SHORT).show()
         );
+
+        findViewById(R.id.openCameraOptionsBtn).setOnClickListener(v -> {
+            Intent intent = new Intent(this, CameraOptionsScreen.class);
+            startActivity(intent);
+        });
 
     }
 }
