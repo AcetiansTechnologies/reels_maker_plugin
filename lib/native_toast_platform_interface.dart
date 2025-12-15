@@ -29,4 +29,6 @@ abstract class NativeToastPlatform extends PlatformInterface {
 
   Future<void> showToast(String message);
   Future<void> openNativeScreen();
+
+  Future<void> openCameraActivity();
 }

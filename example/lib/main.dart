@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:native_toast/native_toast.dart';
+import 'package:native_toast_example/video_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -64,6 +65,32 @@ class _MyAppState extends State<MyApp> {
               },
               style: TextButton.styleFrom(backgroundColor: Colors.blueAccent),
               child: Text("Show toast", style: TextStyle(color: Colors.white)),
+            ),
+
+            TextButton(
+              onPressed: () async {
+                try {
+                  final String? path = await const MethodChannel(
+                    'native_toast',
+                  ).invokeMethod('recordVideo');
+
+                  if (path != null && context.mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => VideoScreen(videoPath: path),
+                      ),
+                    );
+                  }
+                } on PlatformException catch (e) {
+                  debugPrint('Recording failed: ${e.message}');
+                }
+              },
+              style: TextButton.styleFrom(backgroundColor: Colors.blueAccent),
+              child: const Text(
+                "Open Camera Activity",
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),

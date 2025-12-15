@@ -26,4 +26,9 @@ class MethodChannelNativeToast extends NativeToastPlatform {
   Future<void> openNativeScreen() async {
     await methodChannel.invokeMethod("openNativeScreen");
   }
+
+  @override
+  Future<void> openCameraActivity() {
+    return methodChannel.invokeMethod("openCameraActivity");
+  }
 }

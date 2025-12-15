@@ -12,4 +12,8 @@ class NativeToast {
   Future<void> openNativeScreen() {
     return NativeToastPlatform.instance.openNativeScreen();
   }
+
+  void openCameraActivity() {
+    NativeToastPlatform.instance.openCameraActivity();
+  }
 }

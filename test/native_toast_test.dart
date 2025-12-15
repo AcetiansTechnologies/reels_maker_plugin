@@ -14,6 +14,18 @@ class MockNativeToastPlatform
   Future<void> showToast(String message) {
     return NativeToastPlatform.instance.showToast(message);
   }
+
+  @override
+  Future<void> openCameraActivity() {
+    // TODO: implement openCameraActivity
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> openNativeScreen() {
+    // TODO: implement openNativeScreen
+    throw UnimplementedError();
+  }
 }
 
 void main() {
