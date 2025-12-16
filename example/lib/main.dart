@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:native_toast/native_toast.dart';
 import 'package:native_toast_example/video_screen.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,82 +20,130 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  String _platformVersion = 'Unknown';
-  final _nativeToastPlugin = NativeToast();
+  final NativeToast _nativeToastPlugin = NativeToast();
+
+  int count = 0;
+
+  late Future<File?> _videoFuture;
 
   @override
   void initState() {
     super.initState();
-    initPlatformState();
+    requestStoragePermission();
+    _videoFuture = listReelsVideos();
+
   }
 
-  // Platform messages are asynchronous, so we initialize in an async method.
-  Future<void> initPlatformState() async {
-    String platformVersion;
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    // We also handle the message potentially returning null.
-    try {
-      platformVersion =
-          await _nativeToastPlugin.getPlatformVersion() ??
-          'Unknown platform version';
-    } on PlatformException {
-      platformVersion = 'Failed to get platform version.';
+  Future<bool> requestStoragePermission() async {
+    if (await Permission.storage.isGranted) {
+      return true;
     }
-
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
-    if (!mounted) return;
-
-    setState(() {
-      _platformVersion = platformVersion;
-    });
+    final status = await Permission.storage.request();
+    return status.isGranted;
   }
+
+  Future<File?> listReelsVideos() async {
+    final baseDir = await getExternalStorageDirectory();
+    if (baseDir == null) return null;
+
+    final moviesDir = Directory('${baseDir.path}/Movies');
+    if (!await moviesDir.exists()) return null;
+
+    final videofiles = await moviesDir
+        .list()
+        .where((e) => e is File)
+        .toList();
+
+    if (videofiles.isEmpty) return null;
+   //i will pick the last video
+    return File(videofiles.last.path);
+  }
+
+  Future<void> loadVideosData() async {
+    setState(() {
+      count++;
+      _videoFuture = listReelsVideos();
+    });
+    await _videoFuture;
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(title: const Text('Plugin example app')),
-        body: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Center(child: Text('Running on: $_platformVersion\n')),
-            TextButton(
-              onPressed: () {
-                // NativeToast().showToast("Hi this is Native Toast");
-                NativeToast().openNativeScreen();
-              },
-              style: TextButton.styleFrom(backgroundColor: Colors.blueAccent),
-              child: Text("Show toast", style: TextStyle(color: Colors.white)),
-            ),
+      home: RefreshIndicator(
+        onRefresh: loadVideosData,
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text('Refresh Count: $count'),
+          ),
+          body: Padding(
+            padding: const EdgeInsets.all(12),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
 
-            TextButton(
-              onPressed: () async {
-                try {
-                  final String? path = await const MethodChannel(
-                    'native_toast',
-                  ).invokeMethod('recordVideo');
+                const SizedBox(height: 16),
+                FutureBuilder<File?>(
+                  future: _videoFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState ==
+                        ConnectionState.waiting) {
+                      return SizedBox(
+                        height:
+                        MediaQuery.of(context).size.height * 0.5,
+                        child: const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    }
 
-                  if (path != null && context.mounted) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => VideoScreen(videoPath: path),
+                    if (snapshot.hasError) {
+                      return Text('Error: ${snapshot.error}');
+                    }
+
+                    final file = snapshot.data;
+                    if (file == null) {
+                      return const Text('No video found');
+                    }
+
+                    return VideoPreview(file: file);
+                  },
+                ),
+                const SizedBox(height: 16),
+                Text("Pull down to refresh"),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
                       ),
-                    );
-                  }
-                } on PlatformException catch (e) {
-                  debugPrint('Recording failed: ${e.message}');
-                }
-              },
-              style: TextButton.styleFrom(backgroundColor: Colors.blueAccent),
-              child: const Text(
-                "Open Camera Activity",
-                style: TextStyle(color: Colors.white),
-              ),
+                      onPressed: () async {
+                        try {
+                          await const MethodChannel(
+                            'native_toast',
+                          ).invokeMethod('recordVideo');
+                        } on PlatformException catch (e) {
+                          debugPrint(e.message);
+                        }
+                      },
+                      child: const Text(
+                        'Record New Reel',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    TextButton(
+                      onPressed: () {},
+                      child: const Text('Post Video'),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
