@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#1A1A1A"
+
+    android:orientation="vertical">
+
+    <!-- Top Bar with Back and Save buttons -->
+    <RelativeLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#1A1A1A"
+        android:padding="8dp">
+
+        <!-- Back Button -->
+        <ImageButton
+            android:id="@+id/backBtn"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:background="@drawable/btn_bg_sq"
+            android:contentDescription="Back"
+            android:padding="16dp"
+            android:src="@drawable/ic_back"
+            android:tint="@android:color/white" />
+
+        <!-- Save Button -->
+        <ImageButton
+            android:id="@+id/saveBtn"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:background="@drawable/btn_bg_sq"
+            android:contentDescription="Save"
+            android:padding="12dp"
+            android:src="@drawable/ic_arrow_go"
+            android:tint="@android:color/white" />
+    </RelativeLayout>
+
+    <!-- Video Player Container -->
+    <RelativeLayout
+        android:id="@+id/videoPlayerContainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@android:color/transparent">
+
+        <!-- VideoView for playback -->
+        <VideoView
+            android:id="@+id/videoView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_centerInParent="true" />
+
+        <!-- Play Button (centered) -->
+        <ImageButton
+            android:id="@+id/playBtn"
+            android:layout_width="58dp"
+            android:layout_height="58dp"
+            android:layout_centerInParent="true"
+            android:background="@drawable/btn_bg"
+            android:contentDescription="Play"
+            android:padding="12dp"
+            android:src="@drawable/ic_play"
+            android:tint="@android:color/white" />
+    </RelativeLayout>
+
+
+    <!-- Playback Controls (Timeline) -->
+    <RelativeLayout
+        android:id="@+id/playbackControls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#1A1A1A"
+
+        android:padding="12dp">
+
+        <!-- Time Display: Current / Total -->
+        <TextView
+            android:id="@+id/timeDisplay"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:text="0:00 / 0:00"
+            android:textColor="@android:color/white"
+            android:textSize="12sp" />
+
+        <!-- Seek Bar / Timeline -->
+        <SeekBar
+            android:id="@+id/seekBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/timeDisplay"
+            android:layout_marginTop="8dp"
+            android:progressTint="@android:color/white"
+            android:thumbTint="@android:color/white" />
+
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/trimControls"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginVertical="16dp"
+
+        android:background="@drawable/border_white"
+        android:padding="12dp"
+        android:visibility="visible">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/thumbnailRecycler"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:overScrollMode="never" />
+
+            <!-- LEFT HANDLE -->
+            <View
+                android:id="@+id/leftHandle"
+                android:layout_width="8dp"
+                android:layout_height="match_parent"
+                android:layout_gravity="start"
+                android:background="@android:color/white" />
+
+            <!-- RIGHT HANDLE -->
+            <View
+                android:id="@+id/rightHandle"
+                android:layout_width="8dp"
+                android:layout_height="match_parent"
+                android:layout_gravity="end"
+                android:background="@android:color/white" />
+
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/startTimeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/btn_bg"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp"
+                android:text="0:00"
+                android:textColor="@android:color/white"
+                android:textSize="12sp" />
+
+            <View
+                android:layout_width="wrap_content"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/endTimeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/btn_bg"
+                android:paddingHorizontal="12dp"
+
+                android:paddingVertical="8dp"
+                android:text="0:00"
+                android:textColor="@android:color/white"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+    </RelativeLayout>
+
+    <!-- Bottom Edit Options Bar -->
+    <LinearLayout
+        android:id="@+id/editOptionsBar"
+        android:layout_width="match_parent"
+
+        android:layout_height="wrap_content"
+        android:background="#1A1A1A"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingBottom="12dp">
+
+        <!-- Edit Button -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageButton
+                android:id="@+id/trimBtn"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:background="@drawable/btn_bg_sq"
+                android:contentDescription="Trim"
+                android:padding="16dp"
+                android:src="@drawable/ic_scissors"
+                android:tint="@android:color/white" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Edit"
+                android:textColor="@android:color/white"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Audio Button -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageButton
+                android:id="@+id/audioBtn"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:background="@drawable/btn_bg_sq"
+                android:contentDescription="Audio"
+                android:padding="16dp"
+                android:src="@drawable/ic_music"
+                android:tint="@android:color/white" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Audio"
+                android:textColor="@android:color/white"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Text Button -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageButton
+                android:id="@+id/textBtn"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:background="@drawable/btn_bg_sq"
+                android:contentDescription="Text"
+                android:padding="16dp"
+                android:src="@drawable/ic_text"
+                android:tint="@android:color/white" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Text"
+                android:textColor="@android:color/white"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Voiceover Button -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageButton
+                android:id="@+id/voiceoverBtn"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:background="@drawable/btn_bg_sq"
+                android:contentDescription="Voiceover"
+                android:padding="16dp"
+                android:src="@drawable/ic_mic"
+                android:tint="@android:color/white" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Voice"
+                android:textColor="@android:color/white"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Filters Button -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageButton
+                android:id="@+id/filtersBtn"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:background="@drawable/btn_bg_sq"
+                android:contentDescription="Filters"
+                android:padding="16dp"
+                android:src="@drawable/ic_mackeup"
+                android:tint="@android:color/white" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Filters"
+                android:textColor="@android:color/white"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>

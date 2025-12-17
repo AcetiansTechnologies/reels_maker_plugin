@@ -1,51 +1,126 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/main"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:id="@+id/main"
+
+    android:background="@android:color/black">
 
     <!-- Camera Preview -->
     <androidx.camera.view.PreviewView
         android:id="@+id/previewView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
-    <!--    switch camera icon btn-->
-    <Button
-        android:id="@+id/switchCameraBtn"
+
+    <!-- Video Timer (visible in Video mode) - Shows MM:SS at top -->
+    <TextView
+        android:id="@+id/videoTimer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="16dp"
+        android:text="00:00"
+        android:textColor="@android:color/white"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:background="@drawable/btn_bg"
+        android:padding="10dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:visibility="visible"/>
+
+    <!-- Switch Camera Button -->
+    <ImageButton
+        android:id="@+id/switchCameraBtn"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_alignParentTop="true"
         android:layout_alignParentEnd="true"
-        android:layout_marginTop="24dp"
-        android:layout_marginEnd="30dp"
-        android:text="Switch" />
-    <!-- Capture Button -->
-    <LinearLayout
-        android:layout_width="match_parent"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="10dp"
+        android:padding="12dp"
+        android:background="@drawable/btn_bg"
+        android:src="@drawable/ic_refresh"
+        android:tint="@android:color/white"
+        android:contentDescription="Switch Camera" />
+
+    <!-- Record Button Container -->
+    <RelativeLayout
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_above="@id/bottomModeBar"
+        android:layout_marginBottom="16dp">
+
+        <!-- Short Mode: Progress Ring (grows from 0 to 15 seconds) -->
+        <ProgressBar
+            android:id="@+id/shortProgress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="88dp"
+            android:layout_height="88dp"
+            android:layout_centerInParent="true"
+            android:max="100"
+            android:progress="0"
+            android:indeterminate="false"
+            android:progressDrawable="@drawable/circular_progress"
+            android:visibility="gone"/>
+
+        <!-- Record Button -->
+        <ImageButton
+            android:id="@+id/recordBtn"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:layout_centerInParent="true"
+            android:tint="@android:color/white"
+            android:background="@drawable/record_idle"
+            android:contentDescription="Record"/>
+
+        <!-- Short Timer (visible in Short mode) - Shows seconds inside button -->
+        <TextView
+            android:id="@+id/shortTimer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:text="0"
+            android:textColor="@android:color/white"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:elevation="2dp"
+            android:visibility="gone"/>
+    </RelativeLayout>
+
+    <!-- Bottom Mode Bar -->
+    <LinearLayout
+        android:id="@+id/bottomModeBar"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
         android:layout_alignParentBottom="true"
-        android:layout_marginBottom="24dp"
         android:gravity="center"
-        android:paddingHorizontal="12dp">
+        android:orientation="horizontal"
+        android:paddingBottom="12dp">
 
-        <Button
-            android:id="@+id/captureImageBtn"
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/videoMode"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_centerHorizontal="true"
-            android:layout_margin="12dp"
-            android:layout_weight="1"
-            android:text="Capture" />
+            android:text="Video"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            android:background="@drawable/btn_bg"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp" />
 
-        <Button
-            android:id="@+id/recordVideoBtn"
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/shortMode"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_margin="12dp"
-
-            android:layout_weight="1"
-            android:text="Record Video" />
-
+            android:layout_marginStart="12dp"
+            android:text="Short"
+            android:textColor="#AAAAAA"
+            android:textSize="16sp"
+            android:background="@drawable/btn_bg_two"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp" />
     </LinearLayout>
 
 </RelativeLayout>
