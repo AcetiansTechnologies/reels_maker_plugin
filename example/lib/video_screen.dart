@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -25,9 +26,7 @@ class _VideoPreviewState extends State<VideoPreview> {
 
   void videoStatusToggler() {
     setState(() {
-      _controller.value.isPlaying
-          ? _controller.pause()
-          : _controller.play();
+      _controller.value.isPlaying ? _controller.pause() : _controller.play();
     });
   }
 
@@ -40,13 +39,15 @@ class _VideoPreviewState extends State<VideoPreview> {
   @override
   Widget build(BuildContext context) {
     if (!_controller.value.isInitialized) {
-      return  Container(
-          height: MediaQuery.of(context).size.height*0.5,child:Center(child: CircularProgressIndicator()));
+      return SizedBox(
+        height: MediaQuery.of(context).size.height * 0.5,
+        child: Center(child: CircularProgressIndicator()),
+      );
     }
 
     return Center(
       child: Container(
-        height: MediaQuery.of(context).size.height*0.5,
+        height: MediaQuery.of(context).size.height * 0.5,
         decoration: BoxDecoration(
           color: Colors.blue.shade100,
           borderRadius: BorderRadius.circular(12),
@@ -68,15 +69,12 @@ class _VideoPreviewState extends State<VideoPreview> {
                 ),
                 padding: const EdgeInsets.all(12),
                 child: Icon(
-                  _controller.value.isPlaying
-                      ? Icons.pause
-                      : Icons.play_arrow,
+                  _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
                   color: Colors.white,
                   size: 48,
                 ),
-              ) ,
-
-        ),
+              ),
+            ),
           ],
         ),
       ),
