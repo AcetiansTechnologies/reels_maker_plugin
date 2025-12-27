@@ -30,8 +30,8 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import com.arthenica.ffmpegkit.FFmpegKit;
-import com.arthenica.ffmpegkit.ReturnCode;
+//import com.arthenica.ffmpegkit.FFmpegKit;
+//import com.arthenica.ffmpegkit.ReturnCode;
 
 
 public class EditVideoActivity extends AppCompatActivity {
@@ -195,12 +195,12 @@ public class EditVideoActivity extends AppCompatActivity {
         saveBtn.setOnClickListener(v -> {
             // no need for any intent in flutter we are taking video from the file amnager and with the lastest video
             if (currentUiMode == UiMode.TRIM) {
-                trimVideo();
+                Toast.makeText(this, "Trim Mode", Toast.LENGTH_SHORT).show();
+//                trimVideo();
             } else {
                 finish();
             }
         });
-
 
 
         // Trim options
@@ -226,34 +226,6 @@ public class EditVideoActivity extends AppCompatActivity {
         });
     }
 
-    private void trimVideo() {
-
-        try {
-            String input = getSafeInputPath();
-            String output = getOutputPath();
-            String command = buildTrimCommand(input, output);
-
-            Toast.makeText(this, "Trimming video…", Toast.LENGTH_SHORT).show();
-
-            FFmpegKit.executeAsync(command, session -> {
-
-                if (ReturnCode.isSuccess(session.getReturnCode())) {
-
-                    runOnUiThread(() -> {
-                        Toast.makeText(this, "Trim saved", Toast.LENGTH_SHORT).show();
-                        finish();
-                    });
-
-                } else {
-                    runOnUiThread(() -> Toast.makeText(this, "Trim failed", Toast.LENGTH_LONG).show());
-                }
-            });
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            Toast.makeText(this, "Trim error", Toast.LENGTH_LONG).show();
-        }
-    }
 
     private String getSafeInputPath() throws Exception {
 

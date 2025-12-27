@@ -3,10 +3,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:native_toast/native_toast.dart';
 import 'package:native_toast_example/video_screen.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() {
   runApp(const MyApp());
@@ -20,8 +19,6 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  final NativeToast _nativeToastPlugin = NativeToast();
-
   int count = 0;
 
   late Future<File?> _videoFuture;
@@ -31,7 +28,6 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     requestStoragePermission();
     _videoFuture = listReelsVideos();
-
   }
 
   Future<bool> requestStoragePermission() async {
@@ -49,13 +45,10 @@ class _MyAppState extends State<MyApp> {
     final moviesDir = Directory('${baseDir.path}/Movies');
     if (!await moviesDir.exists()) return null;
 
-    final videofiles = await moviesDir
-        .list()
-        .where((e) => e is File)
-        .toList();
+    final videofiles = await moviesDir.list().where((e) => e is File).toList();
 
     if (videofiles.isEmpty) return null;
-   //i will pick the last video
+    //i will pick the last video
     return File(videofiles.last.path);
   }
 
@@ -67,35 +60,26 @@ class _MyAppState extends State<MyApp> {
     await _videoFuture;
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: RefreshIndicator(
         onRefresh: loadVideosData,
         child: Scaffold(
-          appBar: AppBar(
-            title: Text('Refresh Count: $count'),
-          ),
+          appBar: AppBar(title: Text('Refresh Count: $count')),
           body: Padding(
             padding: const EdgeInsets.all(12),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
-
                 const SizedBox(height: 16),
                 FutureBuilder<File?>(
                   future: _videoFuture,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState ==
-                        ConnectionState.waiting) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
                       return SizedBox(
-                        height:
-                        MediaQuery.of(context).size.height * 0.5,
-                        child: const Center(
-                          child: CircularProgressIndicator(),
-                        ),
+                        height: MediaQuery.of(context).size.height * 0.5,
+                        child: const Center(child: CircularProgressIndicator()),
                       );
                     }
 
