@@ -11,7 +11,10 @@ import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
+import java.util.HashMap;
+import java.util.Map;
+import java.io.File;       // for File class
+import java.util.Arrays;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatButton;
@@ -26,7 +29,13 @@ import androidx.camera.video.Recording;
 import androidx.camera.video.VideoCapture;
 import androidx.camera.video.VideoRecordEvent;
 import androidx.camera.view.PreviewView;
+import java.util.HashMap;
+import java.util.Map;
+
 import androidx.core.app.ActivityCompat;
+
+import com.example.native_toast.NativeToastPlugin;
+
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -61,7 +70,7 @@ public class CameraActivity extends AppCompatActivity {
 
     private static final int PERMISSION_CODE = 101;
     private String currentVideoPath;
-
+    private static final int REQ_VIDEO_EDITOR = 2001;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -211,18 +220,15 @@ public class CameraActivity extends AppCompatActivity {
                                     recordBtn.setImageResource(R.drawable.ic_video);
                                     resetTimerUI();
                                 } else {
-                                    Intent editIntent =
-                                            new Intent(CameraActivity.this, EditVideoActivity.class);
-                                    editIntent.putExtra("videoPath", currentVideoPath);
+                                    Intent editIntent = new Intent(CameraActivity.this, EditVideoActivity.class);
+                                    editIntent.putExtra("video_path", currentVideoPath);
                                     editIntent.putExtra(
-                                            "videoUri",
-                                            finalize.getOutputResults()
-                                                    .getOutputUri()
-                                                    .toString()
+                                            "video_uri",
+                                            finalize.getOutputResults().getOutputUri().toString()
                                     );
-                                    startActivity(editIntent);
-                                    finish();
-                                }
+
+                                    startActivityForResult(editIntent, REQ_VIDEO_EDITOR);
+                                    }
                             }
                         }
                 );
@@ -358,4 +364,36 @@ public class CameraActivity extends AppCompatActivity {
         super.onDestroy();
         stopTimer();
     }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == REQ_VIDEO_EDITOR) { // editor finished
+            if (NativeToastPlugin.pendingResult != null) {
+                HashMap<String, Object> map = new HashMap<>();
+                String fileP=getLatestVideoPath();
+                map.put("videoPath", fileP);
+                NativeToastPlugin.pendingResult.success(map);
+                NativeToastPlugin.pendingResult = null;
+            }
+
+            finish(); // return to Flutter
+        }
+    }
+
+    private String getLatestVideoPath() {
+        File moviesDir = getExternalFilesDir(Environment.DIRECTORY_MOVIES);
+        if (moviesDir == null || !moviesDir.exists()) return null;
+
+        File[] files = moviesDir.listFiles((dir, name) -> name.endsWith(".mp4"));
+        if (files == null || files.length == 0) return null;
+
+        // Sort by last modified descending
+        Arrays.sort(files, (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
+
+        return files[0].getAbsolutePath();
+    }
+
+
 }

@@ -1,6 +1,7 @@
 package com.example.native_toast;
 
 import android.content.Intent;
+import android.app.Activity;
 import android.graphics.Bitmap;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
@@ -30,6 +31,8 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.HashMap;
+import java.util.Map;
 //import com.arthenica.ffmpegkit.FFmpegKit;
 //import com.arthenica.ffmpegkit.ReturnCode;
 
@@ -66,6 +69,7 @@ public class EditVideoActivity extends AppCompatActivity {
     private TextView timeDisplay;
     private String videoPath;
     private String videoUri;
+    private Activity activity;
 
     private MediaPlayer.OnPreparedListener onPreparedListener;
     private Runnable updateSeekBar;
@@ -193,14 +197,19 @@ public class EditVideoActivity extends AppCompatActivity {
 
         // Save button - navigate to Flutter
         saveBtn.setOnClickListener(v -> {
-            // no need for any intent in flutter we are taking video from the file amnager and with the lastest video
-            if (currentUiMode == UiMode.TRIM) {
-                Toast.makeText(this, "Trim Mode", Toast.LENGTH_SHORT).show();
-//                trimVideo();
+            String finalVideoPath = videoPath; // the edited video path
+
+            if (finalVideoPath == null || finalVideoPath.isEmpty()) {
+                setResult(Activity.RESULT_CANCELED); // no video
             } else {
-                finish();
+                Intent resultIntent = new Intent();
+                resultIntent.putExtra("video_path", finalVideoPath);
+                setResult(Activity.RESULT_OK, resultIntent); // send result back
             }
+
+            finish(); // close EditVideoActivity
         });
+
 
 
         // Trim options

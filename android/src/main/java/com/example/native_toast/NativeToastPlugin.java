@@ -15,6 +15,10 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.PluginRegistry;
 
+import java.io.File;       // for File class
+import java.util.Arrays;   // for Arrays.sort
+
+
 /**
  * NativeToastPlugin
  * Handles method calls from Flutter and launches native Android screens.
@@ -30,7 +34,7 @@ public class NativeToastPlugin implements
     private Activity activity;
 
     // Used to send result back to Flutter after video recording
-    private MethodChannel.Result pendingResult;
+    public static MethodChannel.Result pendingResult;
 
     private static final int RECORD_VIDEO_REQUEST_CODE = 101;
 
@@ -142,4 +146,7 @@ public class NativeToastPlugin implements
     public void onDetachedFromActivityForConfigChanges() {
         onDetachedFromActivity();
     }
+
+
+
 }
