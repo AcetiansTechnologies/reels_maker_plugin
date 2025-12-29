@@ -69,7 +69,6 @@ public class EditVideoActivity extends AppCompatActivity {
     private TextView timeDisplay;
     private String videoPath;
     private String videoUri;
-    private Activity activity;
 
     private MediaPlayer.OnPreparedListener onPreparedListener;
     private Runnable updateSeekBar;

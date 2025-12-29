@@ -66,7 +66,7 @@ public class CameraActivity extends AppCompatActivity {
 
     private final Handler timerHandler = new Handler();
     private int secondsElapsed = 0;
-    private static final int SHORT_MAX_SECONDS = 15;
+    private static final int SHORT_MAX_SECONDS = 60;
 
     private static final int PERMISSION_CODE = 101;
     private String currentVideoPath;
