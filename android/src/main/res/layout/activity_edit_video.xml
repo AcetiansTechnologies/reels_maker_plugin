@@ -111,7 +111,7 @@
 
         android:background="@drawable/border_white"
         android:padding="12dp"
-        android:visibility="visible">
+        android:visibility="gone    ">
 
         <FrameLayout
             android:layout_width="match_parent"

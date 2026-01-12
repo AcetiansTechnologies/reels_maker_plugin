@@ -87,8 +87,8 @@ public class EditVideoActivity extends AppCompatActivity {
 
         // Get video path from intent
         Intent intent = getIntent();
-        videoPath = intent.getStringExtra("videoPath");
-        videoUri = intent.getStringExtra("videoUri");
+        videoPath = intent.getStringExtra("video_path");
+        videoUri = intent.getStringExtra("video_uri");
 
 
         // Initialize views
@@ -134,6 +134,7 @@ public class EditVideoActivity extends AppCompatActivity {
             endTimeText.setText(formatTime((int) videoDurationMs));
 
             updateTimeDisplay();
+            startUpdateSeekBar();
         };
 
         videoView.setOnPreparedListener(onPreparedListener);
@@ -155,12 +156,13 @@ public class EditVideoActivity extends AppCompatActivity {
             if (videoView.isPlaying()) {
                 videoView.pause();
                 playBtn.setImageResource(R.drawable.ic_play);
+                handler.removeCallbacks(updateSeekBar);
                 handler.removeCallbacks(trimLoopRunnable);
             } else {
                 videoView.seekTo((int) startTrimMs);
                 videoView.start();
                 playBtn.setImageResource(R.drawable.ic_pause);
-
+                startUpdateSeekBar();
                 if (currentUiMode == UiMode.TRIM) {
                     handler.post(trimLoopRunnable);
                 }

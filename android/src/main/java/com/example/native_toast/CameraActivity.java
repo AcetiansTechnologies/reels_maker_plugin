@@ -1,5 +1,7 @@
 package com.example.native_toast;
 
+import static android.view.View.GONE;
+
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -11,10 +13,7 @@ import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-import java.util.HashMap;
-import java.util.Map;
-import java.io.File;       // for File class
-import java.util.Arrays;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatButton;
@@ -22,6 +21,7 @@ import androidx.camera.core.CameraSelector;
 import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.video.FileOutputOptions;
+import androidx.camera.video.PendingRecording;
 import androidx.camera.video.Quality;
 import androidx.camera.video.QualitySelector;
 import androidx.camera.video.Recorder;
@@ -29,13 +29,7 @@ import androidx.camera.video.Recording;
 import androidx.camera.video.VideoCapture;
 import androidx.camera.video.VideoRecordEvent;
 import androidx.camera.view.PreviewView;
-import java.util.HashMap;
-import java.util.Map;
-
 import androidx.core.app.ActivityCompat;
-
-import com.example.native_toast.NativeToastPlugin;
-
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -44,8 +38,9 @@ import androidx.core.view.WindowInsetsCompat;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Locale;
-import androidx.camera.video.PendingRecording;
 
 
 public class CameraActivity extends AppCompatActivity {
@@ -69,8 +64,10 @@ public class CameraActivity extends AppCompatActivity {
     private static final int SHORT_MAX_SECONDS = 60;
 
     private static final int PERMISSION_CODE = 101;
+    ImageButton switchCameraBtn;
     private String currentVideoPath;
     private static final int REQ_VIDEO_EDITOR = 2001;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -88,7 +85,7 @@ public class CameraActivity extends AppCompatActivity {
         shortTimer = findViewById(R.id.shortTimer);
         shortProgress = findViewById(R.id.shortProgress);
 
-        ImageButton switchCameraBtn = findViewById(R.id.switchCameraBtn);
+        switchCameraBtn = findViewById(R.id.switchCameraBtn);
         AppCompatButton videoMode = findViewById(R.id.videoMode);
         AppCompatButton shortMode = findViewById(R.id.shortMode);
 
@@ -172,6 +169,7 @@ public class CameraActivity extends AppCompatActivity {
     /* ---------------- RECORDING ---------------- */
 
     private void startVideoRecording() {
+        switchCameraBtn.setVisibility(GONE);
         secondsElapsed = 0;
         startTimer();
 
@@ -189,49 +187,33 @@ public class CameraActivity extends AppCompatActivity {
         File file = new File(getExternalFilesDir(Environment.DIRECTORY_MOVIES), "VID_" + System.currentTimeMillis() + ".mp4");
         currentVideoPath = file.getAbsolutePath();
 
-        FileOutputOptions outputOptions =
-                new FileOutputOptions.Builder(file).build();
+        FileOutputOptions outputOptions = new FileOutputOptions.Builder(file).build();
 
-        PendingRecording pendingRecording =
-                videoCapture.getOutput()
-                        .prepareRecording(this, outputOptions);
+        PendingRecording pendingRecording = videoCapture.getOutput().prepareRecording(this, outputOptions);
 
         if (hasPermissions()) {
             pendingRecording = pendingRecording.withAudioEnabled();
         }
 
-        activeRecording =
-                pendingRecording.start(
-                        ContextCompat.getMainExecutor(this),
-                        event -> {
-                            if (event instanceof VideoRecordEvent.Finalize) {
-                                VideoRecordEvent.Finalize finalize =
-                                        (VideoRecordEvent.Finalize) event;
+        activeRecording = pendingRecording.start(ContextCompat.getMainExecutor(this), event -> {
+            if (event instanceof VideoRecordEvent.Finalize finalize) {
 
-                                stopTimer();
+                stopTimer();
 
-                                if (finalize.hasError()) {
-                                    Toast.makeText(
-                                            this,
-                                            "Recording error: " + finalize.getError(),
-                                            Toast.LENGTH_SHORT
-                                    ).show();
-                                    recordBtn.setBackgroundResource(R.drawable.record_idle);
-                                    recordBtn.setImageResource(R.drawable.ic_video);
-                                    resetTimerUI();
-                                } else {
-                                    Intent editIntent = new Intent(CameraActivity.this, EditVideoActivity.class);
-                                    editIntent.putExtra("video_path", currentVideoPath);
-                                    editIntent.putExtra(
-                                            "video_uri",
-                                            finalize.getOutputResults().getOutputUri().toString()
-                                    );
+                if (finalize.hasError()) {
+                    Toast.makeText(this, "Recording error: " + finalize.getError(), Toast.LENGTH_SHORT).show();
+                    recordBtn.setBackgroundResource(R.drawable.record_idle);
+                    recordBtn.setImageResource(R.drawable.ic_video);
+                    resetTimerUI();
+                } else {
+                    Intent editIntent = new Intent(CameraActivity.this, EditVideoActivity.class);
+                    editIntent.putExtra("video_path", currentVideoPath);
+                    editIntent.putExtra("video_uri", finalize.getOutputResults().getOutputUri().toString());
 
-                                    startActivityForResult(editIntent, REQ_VIDEO_EDITOR);
-                                    }
-                            }
-                        }
-                );
+                    startActivityForResult(editIntent, REQ_VIDEO_EDITOR);
+                }
+            }
+        });
     }
 
     private void stopVideoRecording() {
@@ -283,13 +265,13 @@ public class CameraActivity extends AppCompatActivity {
         if (currentMode == Mode.VIDEO) {
             videoTimer.setVisibility(TextView.VISIBLE);
             videoTimer.setText("00:00");
-            shortTimer.setVisibility(TextView.GONE);
-            shortProgress.setVisibility(ProgressBar.GONE);
+            shortTimer.setVisibility(GONE);
+            shortProgress.setVisibility(GONE);
             recordBtn.setImageResource(R.drawable.ic_video);
             recordBtn.setBackgroundResource(R.drawable.record_idle);
         } else {
             // Short mode
-            videoTimer.setVisibility(TextView.GONE);
+            videoTimer.setVisibility(GONE);
             shortTimer.setVisibility(TextView.VISIBLE);
             shortTimer.setText("0");
             shortProgress.setVisibility(ProgressBar.VISIBLE);
@@ -299,6 +281,7 @@ public class CameraActivity extends AppCompatActivity {
             recordBtn.setBackgroundResource(R.drawable.record_idle);
         }
     }
+
     private void resetTimerUI() {
         if (currentMode == Mode.VIDEO) {
             videoTimer.setText("00:00");
@@ -372,7 +355,7 @@ public class CameraActivity extends AppCompatActivity {
         if (requestCode == REQ_VIDEO_EDITOR) { // editor finished
             if (NativeToastPlugin.pendingResult != null) {
                 HashMap<String, Object> map = new HashMap<>();
-                String fileP=getLatestVideoPath();
+                String fileP = getLatestVideoPath();
                 map.put("videoPath", fileP);
                 NativeToastPlugin.pendingResult.success(map);
                 NativeToastPlugin.pendingResult = null;
