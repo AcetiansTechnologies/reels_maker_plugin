@@ -57,8 +57,8 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_centerInParent="true"
-            app:use_controller="false"
-            app:surface_type="texture_view" />
+            app:surface_type="texture_view"
+            app:use_controller="false" />
 
         <!-- Play Button (centered) -->
         <ImageButton
@@ -75,35 +75,59 @@
 
 
     <!-- Playback Controls (Timeline) -->
-    <RelativeLayout
+    <LinearLayout
         android:id="@+id/playbackControls"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="#1A1A1A"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingTop="8dp"
+        android:paddingHorizontal="16dp">
 
-        android:padding="12dp">
-
-        <!-- Time Display: Current / Total -->
+        <!-- Time Display -->
         <TextView
             android:id="@+id/timeDisplay"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentStart="true"
+            android:minWidth="80dp"
+            android:layout_marginStart="8dp"
             android:text="0:00 / 0:00"
+            android:layout_weight="1"
             android:textColor="@android:color/white"
             android:textSize="12sp" />
 
-        <!-- Seek Bar / Timeline -->
+
+        <!-- Mute Button -->
+        <ImageButton
+            android:id="@+id/muteBtn"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Mute Toggle"
+            android:padding="4dp"
+            android:src="@drawable/ic_music"
+            android:tint="@android:color/white" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#1A1A1A"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingBottom="16dp"
+        android:paddingHorizontal="12dp">
+        <!-- Seek Bar -->
         <SeekBar
             android:id="@+id/seekBar"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_below="@id/timeDisplay"
-            android:layout_marginTop="8dp"
+            android:layout_weight="1"
             android:progressTint="@android:color/white"
             android:thumbTint="@android:color/white" />
-
-    </RelativeLayout>
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/trimControls"
@@ -157,15 +181,15 @@
                 android:id="@+id/playheadView"
                 android:layout_width="2dp"
                 android:layout_height="match_parent"
-                android:background="#FFFFFFFF"
-                android:layout_gravity="start" />
+                android:layout_gravity="start"
+                android:background="#FFFFFFFF" />
 
             <View
                 android:id="@+id/selectedRangeView"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:background="@drawable/bg_selected_range"
-                android:layout_gravity="start" />
+                android:layout_gravity="start"
+                android:background="@drawable/bg_selected_range" />
             <!-- LEFT HANDLE -->
             <View
                 android:id="@+id/leftHandle"
@@ -183,6 +207,68 @@
                 android:background="@drawable/bg_trim_handle_right" />
         </FrameLayout>
 
+    </LinearLayout>
+
+    <!-- VOICE OVER CONTROLS -->
+    <LinearLayout
+        android:id="@+id/voiceOverControls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginVertical="12dp"
+        android:background="#2A2A2A"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:visibility="gone">
+
+        <CheckBox
+            android:id="@+id/voiceMixBox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:buttonTint="@android:color/white"
+            android:checked="true"
+            android:text="Keep Original Video Sound"
+            android:textColor="@android:color/white" />
+
+        <TextView
+            android:id="@+id/voiceStatusText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:text="Tap mic to record"
+            android:textColor="#AAAAAA"
+            android:textSize="14sp" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/voiceRecordBtn"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:background="@drawable/btn_bg_sq"
+                android:contentDescription="Record Voice"
+                android:padding="16dp"
+                android:src="@drawable/ic_mic"
+                android:tint="@android:color/white" />
+
+            <ImageButton
+                android:id="@+id/voiceDeleteBtn"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="24dp"
+                android:background="@drawable/btn_bg_sq"
+                android:contentDescription="Delete Voice"
+                android:padding="12dp"
+                android:src="@drawable/ic_refresh"
+                android:tint="#FF5555"
+                android:visibility="gone" />
+        </LinearLayout>
     </LinearLayout>
 
     <!-- Bottom Edit Options Bar -->
