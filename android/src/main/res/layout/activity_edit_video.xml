@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -50,12 +51,14 @@
         android:layout_weight="1"
         android:background="@android:color/transparent">
 
-        <!-- VideoView for playback -->
-        <VideoView
-            android:id="@+id/videoView"
+        <!-- PlayerView for ExoPlayer -->
+        <androidx.media3.ui.PlayerView
+            android:id="@+id/playerView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_centerInParent="true" />
+            android:layout_centerInParent="true"
+            app:use_controller="false"
+            app:surface_type="texture_view" />
 
         <!-- Play Button (centered) -->
         <ImageButton

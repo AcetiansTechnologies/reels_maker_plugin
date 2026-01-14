@@ -355,7 +355,17 @@ public class CameraActivity extends AppCompatActivity {
         if (requestCode == REQ_VIDEO_EDITOR) { // editor finished
             if (NativeToastPlugin.pendingResult != null) {
                 HashMap<String, Object> map = new HashMap<>();
-                String fileP = getLatestVideoPath();
+                
+                String fileP = null;
+                if (resultCode == RESULT_OK && data != null) {
+                    fileP = data.getStringExtra("video_path");
+                }
+                
+                // Fallback (though ideally shouldn't happen if saved correctly)
+                if (fileP == null) {
+                    fileP = getLatestVideoPath();
+                }
+
                 map.put("videoPath", fileP);
                 NativeToastPlugin.pendingResult.success(map);
                 NativeToastPlugin.pendingResult = null;

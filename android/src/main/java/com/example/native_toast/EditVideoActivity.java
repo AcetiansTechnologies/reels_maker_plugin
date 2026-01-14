@@ -2,12 +2,14 @@ package com.example.native_toast;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.media.MediaMetadataRetriever;
-import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageButton;
@@ -16,12 +18,22 @@ import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.VideoView;
 
+import androidx.annotation.OptIn;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.media3.common.MediaItem;
+import androidx.media3.common.MimeTypes;
+import androidx.media3.common.Player;
+import androidx.media3.common.util.UnstableApi;
+import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.transformer.Composition;
+import androidx.media3.transformer.ExportException;
+import androidx.media3.transformer.ExportResult;
+import androidx.media3.transformer.Transformer;
+import androidx.media3.ui.PlayerView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -33,10 +45,8 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-//import com.arthenica.ffmpegkit.FFmpegKit;
-//import com.arthenica.ffmpegkit.ReturnCode;
 
-
+@OptIn(markerClass = UnstableApi.class)
 public class EditVideoActivity extends AppCompatActivity {
 
     enum UiMode {
@@ -47,7 +57,6 @@ public class EditVideoActivity extends AppCompatActivity {
 
     private long startTrimMs = 0;
     private long endTrimMs = 0;
-
 
     private UiMode currentUiMode = UiMode.NORMAL;
     private View leftHandle, rightHandle;
@@ -61,8 +70,11 @@ public class EditVideoActivity extends AppCompatActivity {
 
     private LinearLayout trimControls;
 
+    // ExoPlayer & Transformer
+    private PlayerView playerView;
+    private ExoPlayer player;
+    private Transformer transformer;
 
-    private VideoView videoView;
     private ImageButton playBtn, backBtn, saveBtn;
     private ImageButton trimBtn, audioBtn, textBtn, voiceoverBtn, filtersBtn;
     private SeekBar seekBar;
@@ -72,15 +84,15 @@ public class EditVideoActivity extends AppCompatActivity {
     private View selectedRangeView;
     private View playheadView;
 
-
-    private MediaPlayer.OnPreparedListener onPreparedListener;
     private Runnable updateSeekBar;
-    private final android.os.Handler handler = new android.os.Handler();
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private boolean isSeeking = false;
+
+    private ProgressDialog progressDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-//        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_edit_video);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -92,7 +104,6 @@ public class EditVideoActivity extends AppCompatActivity {
         Intent intent = getIntent();
         videoPath = intent.getStringExtra("video_path");
         videoUri = intent.getStringExtra("video_uri");
-
 
         // Initialize views
         playbackControls = findViewById(R.id.playbackControls);
@@ -107,7 +118,7 @@ public class EditVideoActivity extends AppCompatActivity {
         selectedRangeView = findViewById(R.id.selectedRangeView);
         playheadView = findViewById(R.id.playheadView);
 
-        videoView = findViewById(R.id.videoView);
+        playerView = findViewById(R.id.playerView);
         playBtn = findViewById(R.id.playBtn);
         backBtn = findViewById(R.id.backBtn);
         saveBtn = findViewById(R.id.saveBtn);
@@ -120,106 +131,56 @@ public class EditVideoActivity extends AppCompatActivity {
         voiceoverBtn = findViewById(R.id.voiceoverBtn);
         filtersBtn = findViewById(R.id.filtersBtn);
 
-        // Setup video view
-        if (videoUri != null) {
-            videoView.setVideoURI(Uri.parse(videoUri));
-        } else if (videoPath != null) {
-            videoView.setVideoPath(videoPath);
-        }
-
-        // When video is ready
-        onPreparedListener = mp -> {
-            videoDurationMs = mp.getDuration();
-            seekBar.setMax(mp.getDuration());
-
-            endTrimMs = videoDurationMs;
-            startTimeText.setText(formatTime(0));
-            endTimeText.setText(formatTime((int) videoDurationMs));
-
-            updateTimeDisplay();
-            startUpdateSeekBar();
-        };
-
-        videoView.setOnPreparedListener(onPreparedListener);
-
-        // When video completes
-        videoView.setOnCompletionListener(mp -> {
-            if (currentUiMode == UiMode.TRIM) {
-                videoView.seekTo((int) (startPercent * videoDurationMs));
-                videoView.start();
-            } else {
-                playBtn.setImageResource(R.drawable.ic_play);
-            }
-        });
-
-        endTrimMs = videoView.getDuration();
+        setupPlayer();
 
         // Play/Pause button
         playBtn.setOnClickListener(v -> {
-            if (videoView.isPlaying()) {
-                videoView.pause();
-                playBtn.setImageResource(R.drawable.ic_play);
-                handler.removeCallbacks(updateSeekBar);
-                handler.removeCallbacks(trimLoopRunnable);
+            if (player == null) return;
+            if (player.isPlaying()) {
+                player.pause();
             } else {
-                videoView.seekTo((int) startTrimMs);
-                videoView.start();
-                playBtn.setImageResource(R.drawable.ic_pause);
-                startUpdateSeekBar();
-                if (currentUiMode == UiMode.TRIM) {
-                    handler.post(trimLoopRunnable);
+                if (currentUiMode == UiMode.TRIM && player.getCurrentPosition() >= endTrimMs) {
+                    player.seekTo(startTrimMs);
                 }
+                player.play();
             }
+            updatePlayPauseIcon();
         });
-
 
         // Seek bar listener
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser) {
-                    videoView.seekTo(progress);
+                if (fromUser && player != null) {
+                    player.seekTo(progress);
                     updateTimeDisplay();
                 }
             }
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-                handler.removeCallbacks(updateSeekBar);
+                isSeeking = true;
             }
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                if (videoView.isPlaying()) {
-                    startUpdateSeekBar();
-                }
+                isSeeking = false;
             }
         });
 
         // Back button - return to camera
         backBtn.setOnClickListener(v -> onBackPressed());
 
-        // Save button - navigate to Flutter
+        // Save button
         saveBtn.setOnClickListener(v -> {
-            String finalVideoPath = videoPath; // the edited video path
-
-            if (finalVideoPath == null || finalVideoPath.isEmpty()) {
-                setResult(Activity.RESULT_CANCELED); // no video
-            } else {
-                Intent resultIntent = new Intent();
-                resultIntent.putExtra("video_path", finalVideoPath);
-                setResult(Activity.RESULT_OK, resultIntent); // send result back
-            }
-
-            finish(); // close EditVideoActivity
+            // Trim and Save
+            startTrimExport();
         });
-
 
         // Trim options
         trimBtn.setOnClickListener(v -> {
             enterTrimMode();
         });
-
 
         audioBtn.setOnClickListener(v -> {
             Toast.makeText(this, "Audio editor coming soon", Toast.LENGTH_SHORT).show();
@@ -237,29 +198,95 @@ public class EditVideoActivity extends AppCompatActivity {
             Toast.makeText(this, "Filters coming soon", Toast.LENGTH_SHORT).show();
         });
     }
+
+    private void setupPlayer() {
+        player = new ExoPlayer.Builder(this).build();
+        playerView.setPlayer(player);
+
+        MediaItem mediaItem;
+        if (videoUri != null) {
+            mediaItem = MediaItem.fromUri(Uri.parse(videoUri));
+        } else if (videoPath != null) {
+            mediaItem = MediaItem.fromUri(Uri.fromFile(new File(videoPath)));
+        } else {
+            return;
+        }
+
+        player.setMediaItem(mediaItem);
+        player.prepare();
+        player.addListener(new Player.Listener() {
+            @Override
+            public void onPlaybackStateChanged(int playbackState) {
+                if (playbackState == Player.STATE_READY) {
+                    videoDurationMs = player.getDuration();
+                    seekBar.setMax((int) videoDurationMs);
+                    if (endTrimMs == 0) {
+                        endTrimMs = videoDurationMs;
+                    }
+                    updateTimeDisplay();
+                    startTimeText.setText(formatTime(0));
+                    endTimeText.setText(formatTime((int) videoDurationMs));
+                } else if (playbackState == Player.STATE_ENDED) {
+                    if (currentUiMode == UiMode.TRIM) {
+                        player.seekTo(startTrimMs);
+                        player.play();
+                    } else {
+                        player.seekTo(0);
+                        player.pause();
+                        updatePlayPauseIcon();
+                    }
+                }
+            }
+
+            @Override
+            public void onIsPlayingChanged(boolean isPlaying) {
+                updatePlayPauseIcon();
+                if (isPlaying) {
+                    startUpdateSeekBar();
+                    if (currentUiMode == UiMode.TRIM) {
+                        handler.post(trimLoopRunnable);
+                    }
+                } else {
+                    handler.removeCallbacks(updateSeekBar);
+                    handler.removeCallbacks(trimLoopRunnable);
+                }
+            }
+        });
+    }
+
+    private void updatePlayPauseIcon() {
+        if (player.isPlaying()) {
+            playBtn.setImageResource(R.drawable.ic_pause);
+        } else {
+            playBtn.setImageResource(R.drawable.ic_play);
+        }
+    }
+
     private void updatePlayheadPosition() {
         if (videoDurationMs <= 0) return;
 
         View parent = (View) playheadView.getParent();
         int parentWidth = parent.getWidth();
+        if (parentWidth == 0) return; // Not laid out yet
 
-        long current = videoView.getCurrentPosition();
+        long current = player.getCurrentPosition();
 
         float percent = current / (float) videoDurationMs;
         float x = percent * parentWidth;
 
-        // Clamp inside trim range
-        float minX = leftHandle.getX();
-        float maxX = rightHandle.getX() + rightHandle.getWidth();
-
-        x = Math.max(minX, Math.min(x, maxX));
-
+        // Visual Playhead logic: It represents global time, but visually clamped in the UI? 
+        // Actually playhead should move across the whole bar.
+        // However user wants "playheadView should start where the drag handle ends" 
+        // -> This implies looping behavior visualization. 
+        // But visually the playhead needs to map to current video time.
+        
         playheadView.setX(x);
     }
 
     private void updateSelectedRangeUI() {
         View parent = (View) selectedRangeView.getParent();
         int parentWidth = parent.getWidth();
+        if (parentWidth == 0) return;
 
         float leftX = leftHandle.getX();
         float rightX = rightHandle.getX() + rightHandle.getWidth();
@@ -271,48 +298,168 @@ public class EditVideoActivity extends AppCompatActivity {
         selectedRangeView.getLayoutParams().width = width;
         selectedRangeView.requestLayout();
     }
+    
+    // ----------- Trimming Logic (Transformer) -----------
 
-    private String getSafeInputPath() throws Exception {
+    private void startTrimExport() {
+        // If we haven't trimmed (full duration), just return original
+        // But user wants "only one video", so if we return original, we should probably delete others too?
+        // Let's stick to the trim flow first.
+        if (startTrimMs == 0 && endTrimMs >= videoDurationMs) {
+             // If not trimming, we still need to ensure "only one video" rule? 
+             // Maybe just cleanup others and keep this one.
+             cleanupStorage(new File(videoPath));
+             finishWithResult(videoPath);
+             return;
+        }
 
-        if (videoPath != null) return videoPath;
+        progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("Trimming Video...");
+        progressDialog.setCancelable(false);
+        progressDialog.show();
 
-        File temp = new File(getCacheDir(), "input_video.mp4");
+        String inputPath = (videoPath != null) ? videoPath : getSafeInputPath();
+        File inputFile = new File(inputPath);
+        
+        // Output to standard movies directory (no "trimmed" folder)
+        String outputPath = getOutputPath();
 
-        try (InputStream in = getContentResolver().openInputStream(Uri.parse(videoUri)); OutputStream out = new FileOutputStream(temp)) {
+        // CLEANUP: Delete everything except the input file before we start writing
+        cleanupStorage(inputFile);
 
-            byte[] buffer = new byte[4096];
-            int read;
-            while ((read = in.read(buffer)) != -1) {
-                out.write(buffer, 0, read);
+        MediaItem mediaItem = new MediaItem.Builder()
+                .setUri(inputPath)
+                .setClippingConfiguration(
+                        new MediaItem.ClippingConfiguration.Builder()
+                                .setStartPositionMs(startTrimMs)
+                                .setEndPositionMs(endTrimMs)
+                                .build())
+                .build();
+
+        transformer = new Transformer.Builder(this)
+                .addListener(new Transformer.Listener() {
+                    @Override
+                    public void onCompleted(Composition composition, ExportResult exportResult) {
+                        runOnUiThread(() -> {
+                            if (progressDialog != null) progressDialog.dismiss();
+                            
+                            // SUCCESS: Now delete the input file so ONLY the new trimmed video remains
+                            if (inputFile.exists()) {
+                                inputFile.delete();
+                            }
+                            
+                            finishWithResult(outputPath);
+                        });
+                    }
+
+                    @Override
+                    public void onError(Composition composition, ExportResult exportResult, ExportException exportException) {
+                        runOnUiThread(() -> {
+                            if (progressDialog != null) progressDialog.dismiss();
+                            Toast.makeText(EditVideoActivity.this, "Trim Failed: " + exportException.getMessage(), Toast.LENGTH_LONG).show();
+                        });
+                    }
+                })
+                .build();
+
+        transformer.start(mediaItem, outputPath);
+    }
+    
+    // Deletes all MP4s in the directory EXCEPT the keepFile
+    private void cleanupStorage(File keepFile) {
+        // We use DIRECTORY_MOVIES for both Camera and Edit
+        File dir = getExternalFilesDir(android.os.Environment.DIRECTORY_MOVIES);
+        if (dir != null && dir.exists()) {
+            File[] files = dir.listFiles((d, name) -> name.toLowerCase().endsWith(".mp4"));
+            if (files != null) {
+                for (File f : files) {
+                    // Don't delete the file we are currently reading from!
+                    if (!f.getAbsolutePath().equals(keepFile.getAbsolutePath())) {
+                        f.delete();
+                    }
+                }
             }
         }
-        return temp.getAbsolutePath();
+        
+        // Also remove the old "trimmed" folder if it exists from previous runs
+        File oldTrimDir = new File(getExternalFilesDir(null), "trimmed");
+        if (oldTrimDir.exists()) {
+            deleteRecursive(oldTrimDir);
+        }
+    }
+    
+    private void deleteRecursive(File fileOrDirectory) {
+        if (fileOrDirectory.isDirectory()) {
+            for (File child : fileOrDirectory.listFiles())
+                deleteRecursive(child);
+        }
+        fileOrDirectory.delete();
     }
 
     private String getOutputPath() {
-        File dir = new File(getExternalFilesDir(null), "trimmed");
+        // Save directly to Movies folder, no subfolder
+        File dir = getExternalFilesDir(android.os.Environment.DIRECTORY_MOVIES);
         if (!dir.exists()) dir.mkdirs();
-
-        return new File(dir, "TRIM_" + System.currentTimeMillis() + ".mp4").getAbsolutePath();
+        // Use a consistent prefix or just generic
+        return new File(dir, "FINAL_" + System.currentTimeMillis() + ".mp4").getAbsolutePath();
     }
 
-    private String buildTrimCommand(String input, String output) {
-
-        float start = startTrimMs / 1000f;
-        float end = endTrimMs / 1000f;
-
-        return String.format(Locale.US, "-y -ss %.3f -to %.3f -i \"%s\" -c copy \"%s\"", start, end, input, output);
+    private void finishWithResult(String finalPath) {
+        if (finalPath == null || finalPath.isEmpty()) {
+            setResult(Activity.RESULT_CANCELED);
+        } else {
+            Intent resultIntent = new Intent();
+            resultIntent.putExtra("video_path", finalPath);
+            setResult(Activity.RESULT_OK, resultIntent);
+        }
+        finish();
     }
+
+    private String getSafeInputPath() {
+        if (videoPath != null) return videoPath;
+        // If URI only, need a real file path for FFMPEG/Transformer mostly?
+        // Transformer supports URIs, so we might just use the URI string for MediaItem.
+        // But let's fallback to cache copy if needed.
+        try {
+            File temp = new File(getCacheDir(), "input_temp.mp4");
+            try (InputStream in = getContentResolver().openInputStream(Uri.parse(videoUri)); 
+                 OutputStream out = new FileOutputStream(temp)) {
+                byte[] buffer = new byte[4096];
+                int read;
+                while ((read = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, read);
+                }
+            }
+            return temp.getAbsolutePath();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+
+    // ----------- Trim UI Logic -----------
 
     private void updateTrimTimes() {
-
         int width = trimControls.getWidth();
+        if (width == 0) return;
 
         float leftX = leftHandle.getX();
         float rightX = rightHandle.getX() + rightHandle.getWidth();
+        
+        // Safety check to avoid NaN or division by zero
+        if (width <= 0) return;
+        
+        // Calculate based on centers/edges handles
+        startPercent = leftX / width;
+        endPercent = rightX / width;
+        
+        // Clamp percentages
+        startPercent = Math.max(0f, Math.min(startPercent, 1f));
+        endPercent = Math.max(0f, Math.min(endPercent, 1f));
 
-        startTrimMs = (long) ((leftX / width) * videoDurationMs);
-        endTrimMs = (long) ((rightX / width) * videoDurationMs);
+        startTrimMs = (long) (startPercent * videoDurationMs);
+        endTrimMs = (long) (endPercent * videoDurationMs);
 
         startTimeText.setText(formatTime((int) startTrimMs));
         endTimeText.setText(formatTime((int) endTrimMs));
@@ -320,33 +467,58 @@ public class EditVideoActivity extends AppCompatActivity {
 
     @SuppressLint("ClickableViewAccessibility")
     private void setupHandleDrag(View handle, boolean isLeft) {
-
         handle.setOnTouchListener((v, event) -> {
             LinearLayout parent = trimControls;
             int parentWidth = parent.getWidth();
 
             if (event.getAction() == MotionEvent.ACTION_MOVE) {
                 float x = event.getRawX() - parent.getX();
-                x = Math.max(0, Math.min(x, parentWidth));
+                // Ensure drag stays within parent bounds
+                x = Math.max(0, Math.min(x, parentWidth - handle.getWidth()));
 
                 if (isLeft) {
+                    // Left handle cannot cross right handle
                     float maxLeft = rightHandle.getX() - handle.getWidth();
+                    // Optional: minimum gap
+                    maxLeft = Math.min(maxLeft, rightHandle.getX() - 30); 
                     x = Math.min(x, maxLeft);
+                    
                     handle.setX(x);
-                    startPercent = x / parentWidth;
+                    
+                    // Logic: "playheadView should start where the drag handle ends"
+                    // If we dragging left handle, update start time and seek player to it for validation
+                    updateTrimTimes();
+                    if (player != null) {
+                         player.seekTo(startTrimMs);
+                         player.pause(); // Pause while dragging for precision
+                    }
+                    
                 } else {
+                    // Right handle cannot cross left handle
                     float minRight = leftHandle.getX() + leftHandle.getWidth();
+                    minRight = Math.max(minRight, leftHandle.getX() + 30 + leftHandle.getWidth());
                     x = Math.max(x, minRight);
+                    
                     handle.setX(x);
-                    endPercent = x / parentWidth;
+                    
+                    updateTrimTimes();
+                     if (player != null) {
+                        player.seekTo(endTrimMs); // Preview the end frame
+                        player.pause();
+                    }
                 }
 
-                updateTrimPlayback();
-                updateTrimTimes();
                 updateSelectedRangeUI();
                 updatePlayheadPosition();
-
                 return true;
+            }
+            if (event.getAction() == MotionEvent.ACTION_UP) {
+                 // Resume or prepare loop when release? 
+                 // User likely wants to preview the loop now.
+                 if (player != null) {
+                     player.seekTo(startTrimMs);
+                     player.play();
+                 }
             }
             return true;
         });
@@ -355,23 +527,18 @@ public class EditVideoActivity extends AppCompatActivity {
     private final Runnable trimLoopRunnable = new Runnable() {
         @Override
         public void run() {
-            if (currentUiMode == UiMode.TRIM && videoView.isPlaying()) {
-                if (videoView.getCurrentPosition() >= endTrimMs) {
-                    videoView.seekTo((int) startTrimMs);
+            if (currentUiMode == UiMode.TRIM && player != null && player.isPlaying()) {
+                long current = player.getCurrentPosition();
+                if (current >= endTrimMs) {
+                    // Loop back to start
+                    player.seekTo(startTrimMs);
+                } else if (current < startTrimMs) {
+                    player.seekTo(startTrimMs);
                 }
                 handler.postDelayed(this, 30);
             }
         }
     };
-
-    private void updateTrimPlayback() {
-        long startMs = (long) (startPercent * videoDurationMs);
-        long endMs = (long) (endPercent * videoDurationMs);
-
-        if (videoView.getCurrentPosition() < startMs || videoView.getCurrentPosition() > endMs) {
-            videoView.seekTo((int) startMs);
-        }
-    }
 
     private List<Bitmap> generateThumbnails() {
         List<Bitmap> list = new ArrayList<>();
@@ -385,17 +552,20 @@ public class EditVideoActivity extends AppCompatActivity {
             }
 
             String durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
-
             if (durationStr == null) return list;
 
             long durationMs = Long.parseLong(durationStr);
-
-            int count = 10;
+            int count = 8; // Number of thumbs to fit
             long interval = durationMs / count;
 
             for (int i = 0; i < count; i++) {
                 Bitmap bmp = retriever.getFrameAtTime(i * interval * 1000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
-                if (bmp != null) list.add(bmp);
+                if (bmp != null) {
+                    // resize to small to save memory
+                    Bitmap scaled = Bitmap.createScaledBitmap(bmp, 150, 150, false);
+                    list.add(scaled);
+                    if (bmp != scaled) bmp.recycle();
+                }
             }
 
         } catch (Exception e) {
@@ -404,10 +574,9 @@ public class EditVideoActivity extends AppCompatActivity {
             try {
                 retriever.release();
             } catch (IOException e) {
-                Toast.makeText(this, "Error creatuing thumnail", Toast.LENGTH_SHORT).show();
+                // ignore
             }
         }
-
         return list;
     }
 
@@ -415,18 +584,44 @@ public class EditVideoActivity extends AppCompatActivity {
     private void enterTrimMode() {
         currentUiMode = UiMode.TRIM;
         selectedRangeView.post(this::updateSelectedRangeUI);
-        playheadView.post(() -> {
-            videoView.seekTo((int) startTrimMs);
-            updatePlayheadPosition();
-        });
+        
         playbackControls.setVisibility(View.GONE);
         trimControls.setVisibility(View.VISIBLE);
 
-        videoView.pause();
-        playBtn.setImageResource(R.drawable.ic_play);
+        if (player != null) {
+            player.pause();
+            playBtn.setImageResource(R.drawable.ic_play);
+            // Default trim = full video initially
+             if (endTrimMs == 0) endTrimMs = videoDurationMs;
+             player.seekTo(startTrimMs);
+        }
 
-        List<Bitmap> thumbs = generateThumbnails();
-        thumbnailRecycler.setAdapter(new VideoThumbnailAdapter(thumbs));
+        // Generate thumbnails async if needed, or main thread for simplicity (small number)
+        new Thread(() -> {
+            List<Bitmap> thumbs = generateThumbnails();
+            runOnUiThread(() -> {
+                 thumbnailRecycler.setAdapter(new VideoThumbnailAdapter(thumbs));
+                 // Init handles positions after layout
+                 trimControls.post(() -> {
+                     
+                     // Reset handles to edges if just entering or if logic requires
+                     // But if we want to remember previous trim state, we should check startTrimMs
+                     
+                     int width = trimControls.getWidth();
+                     if (width > 0 && videoDurationMs > 0) {
+                        float startX = (startTrimMs / (float)videoDurationMs) * width;
+                        float endX = (endTrimMs / (float)videoDurationMs) * width;
+                        // correct right handle anchor
+                        endX = endX - rightHandle.getWidth(); 
+                        
+                        leftHandle.setX(startX);
+                        rightHandle.setX(endX); // Right handle x is its left edge
+                        
+                        updateSelectedRangeUI();
+                     }
+                 });
+            });
+        }).start();
 
         setupHandleDrag(leftHandle, true);
         setupHandleDrag(rightHandle, false);
@@ -435,35 +630,48 @@ public class EditVideoActivity extends AppCompatActivity {
 
     private void exitToNormalMode() {
         currentUiMode = UiMode.NORMAL;
-
         playbackControls.setVisibility(View.VISIBLE);
-
         trimControls.setVisibility(View.GONE);
         handler.removeCallbacks(trimLoopRunnable);
+        
+        // Reset full playback range visually or logical? 
+        // Usually we stay with the trim, but here "exit" implies cancelling trim mode view
+        // But maybe we keep the trim times applied? 
+        // The user says "Back" cancels everything usually. 
         startTrimMs = 0;
         endTrimMs = videoDurationMs;
-
+        
+        if (player != null) updatePlayPauseIcon();
     }
 
 
     private void startUpdateSeekBar() {
-        updateSeekBar = () -> {
-            int pos = videoView.getCurrentPosition();
-            seekBar.setProgress(pos);
-            updateTimeDisplay();
-            updatePlayheadPosition();
-            handler.postDelayed(updateSeekBar, 16); // ~60fps
+        updateSeekBar = new Runnable() {
+            @Override
+            public void run() {
+                if (player != null && player.isPlaying()) {
+                    if (!isSeeking) {
+                        int pos = (int) player.getCurrentPosition();
+                        seekBar.setProgress(pos);
+                    }
+                    updateTimeDisplay();
+                    updatePlayheadPosition();
+                }
+                handler.postDelayed(this, 30);
+            }
         };
         handler.post(updateSeekBar);
     }
 
 
     private void updateTimeDisplay() {
-        int current = videoView.getCurrentPosition();
-        int total = videoView.getDuration();
+        if (player == null) return;
+        long current = player.getCurrentPosition();
+        long total = player.getDuration();
+        if (total < 0) total = 0;
 
-        String currentStr = formatTime(current);
-        String totalStr = formatTime(total);
+        String currentStr = formatTime((int) current);
+        String totalStr = formatTime((int) total);
 
         timeDisplay.setText(String.format(Locale.getDefault(), "%s / %s", currentStr, totalStr));
     }
@@ -478,24 +686,13 @@ public class EditVideoActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-
         if (currentUiMode != UiMode.NORMAL) {
-            // We are inside some edit mode (Trim, Audio, etc.)
             exitToNormalMode();
             return;
         }
-
-        if (videoView.isPlaying()) {
-            videoView.stopPlayback();
+        if (player != null) {
+            player.stop();
         }
-        handler.removeCallbacks(updateSeekBar);
-//        super.onBackPressed();
-        // insted of onbackpress i am going to naviagte to the camera activity
-        // reson why we are finishing The camera activity when we are coming to edit
-        // video activity because. From the edit activity edit video activity
-        // if I go to like when I click go button on the top right. Then it will
-        // finish. And if we have not finished the camera activity, it will
-        // show up the camera activity. So that's why we are doing this.
         Intent cameraIntent = new Intent(this, CameraActivity.class);
         startActivity(cameraIntent);
         finish();
@@ -505,9 +702,10 @@ public class EditVideoActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (videoView != null) {
-            videoView.stopPlayback();
+        if (player != null) {
+            player.release();
+            player = null;
         }
-        handler.removeCallbacks(updateSeekBar);
+        handler.removeCallbacksAndMessages(null);
     }
 }
