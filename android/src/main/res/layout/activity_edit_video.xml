@@ -102,80 +102,85 @@
 
     </RelativeLayout>
 
-    <RelativeLayout
+    <LinearLayout
         android:id="@+id/trimControls"
         android:layout_width="match_parent"
-        android:layout_height="72dp"
-        android:layout_marginHorizontal="24dp"
-        android:layout_marginVertical="16dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginVertical="12dp"
+        android:orientation="vertical"
+        android:visibility="gone">
 
-        android:background="@drawable/border_white"
-        android:padding="12dp"
-        android:visibility="gone    ">
-
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/thumbnailRecycler"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:overScrollMode="never" />
-
-            <!-- LEFT HANDLE -->
-            <View
-                android:id="@+id/leftHandle"
-                android:layout_width="8dp"
-                android:layout_height="match_parent"
-                android:layout_gravity="start"
-                android:background="@android:color/white" />
-
-            <!-- RIGHT HANDLE -->
-            <View
-                android:id="@+id/rightHandle"
-                android:layout_width="8dp"
-                android:layout_height="match_parent"
-                android:layout_gravity="end"
-                android:background="@android:color/white" />
-
-        </FrameLayout>
-
-        <LinearLayout
+        <!-- TIME ROW -->
+        <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:paddingBottom="8dp">
 
             <TextView
                 android:id="@+id/startTimeText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="@drawable/btn_bg"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="8dp"
                 android:text="0:00"
                 android:textColor="@android:color/white"
-                android:textSize="12sp" />
-
-            <View
-                android:layout_width="wrap_content"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
+                android:textSize="13sp"
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/endTimeText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="@drawable/btn_bg"
-                android:paddingHorizontal="12dp"
-
-                android:paddingVertical="8dp"
+                android:layout_alignParentEnd="true"
                 android:text="0:00"
                 android:textColor="@android:color/white"
-                android:textSize="12sp" />
-        </LinearLayout>
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </RelativeLayout>
 
-    </RelativeLayout>
+        <!-- SELECTION FRAME -->
+        <FrameLayout
+            android:id="@+id/trimSelectionContainer"
+            android:layout_width="match_parent"
+            android:layout_height="72dp"
+            android:background="@drawable/bg_trim_selection"
+            android:clipToPadding="false">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/thumbnailRecycler"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:overScrollMode="never" /><!-- PLAYHEAD LINE -->
+            <View
+                android:id="@+id/playheadView"
+                android:layout_width="2dp"
+                android:layout_height="match_parent"
+                android:background="#FFFFFFFF"
+                android:layout_gravity="start" />
+
+            <View
+                android:id="@+id/selectedRangeView"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_selected_range"
+                android:layout_gravity="start" />
+            <!-- LEFT HANDLE -->
+            <View
+                android:id="@+id/leftHandle"
+                android:layout_width="14dp"
+                android:layout_height="match_parent"
+                android:layout_gravity="start"
+                android:background="@drawable/bg_trim_handle_left" />
+
+            <!-- RIGHT HANDLE -->
+            <View
+                android:id="@+id/rightHandle"
+                android:layout_width="14dp"
+                android:layout_height="match_parent"
+                android:layout_gravity="end"
+                android:background="@drawable/bg_trim_handle_right" />
+        </FrameLayout>
+
+    </LinearLayout>
 
     <!-- Bottom Edit Options Bar -->
     <LinearLayout

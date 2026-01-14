@@ -1,7 +1,8 @@
 package com.example.native_toast;
 
-import android.content.Intent;
+import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
@@ -10,6 +11,7 @@ import android.os.Bundle;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -31,8 +33,6 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.HashMap;
-import java.util.Map;
 //import com.arthenica.ffmpegkit.FFmpegKit;
 //import com.arthenica.ffmpegkit.ReturnCode;
 
@@ -59,7 +59,7 @@ public class EditVideoActivity extends AppCompatActivity {
     private RelativeLayout playbackControls;
     private RecyclerView thumbnailRecycler;
 
-    private RelativeLayout trimControls;
+    private LinearLayout trimControls;
 
 
     private VideoView videoView;
@@ -69,6 +69,9 @@ public class EditVideoActivity extends AppCompatActivity {
     private TextView timeDisplay;
     private String videoPath;
     private String videoUri;
+    private View selectedRangeView;
+    private View playheadView;
+
 
     private MediaPlayer.OnPreparedListener onPreparedListener;
     private Runnable updateSeekBar;
@@ -92,7 +95,6 @@ public class EditVideoActivity extends AppCompatActivity {
 
 
         // Initialize views
-
         playbackControls = findViewById(R.id.playbackControls);
         trimControls = findViewById(R.id.trimControls);
 
@@ -102,7 +104,8 @@ public class EditVideoActivity extends AppCompatActivity {
         rightHandle = findViewById(R.id.rightHandle);
         startTimeText = findViewById(R.id.startTimeText);
         endTimeText = findViewById(R.id.endTimeText);
-
+        selectedRangeView = findViewById(R.id.selectedRangeView);
+        playheadView = findViewById(R.id.playheadView);
 
         videoView = findViewById(R.id.videoView);
         playBtn = findViewById(R.id.playBtn);
@@ -212,7 +215,6 @@ public class EditVideoActivity extends AppCompatActivity {
         });
 
 
-
         // Trim options
         trimBtn.setOnClickListener(v -> {
             enterTrimMode();
@@ -235,7 +237,40 @@ public class EditVideoActivity extends AppCompatActivity {
             Toast.makeText(this, "Filters coming soon", Toast.LENGTH_SHORT).show();
         });
     }
+    private void updatePlayheadPosition() {
+        if (videoDurationMs <= 0) return;
 
+        View parent = (View) playheadView.getParent();
+        int parentWidth = parent.getWidth();
+
+        long current = videoView.getCurrentPosition();
+
+        float percent = current / (float) videoDurationMs;
+        float x = percent * parentWidth;
+
+        // Clamp inside trim range
+        float minX = leftHandle.getX();
+        float maxX = rightHandle.getX() + rightHandle.getWidth();
+
+        x = Math.max(minX, Math.min(x, maxX));
+
+        playheadView.setX(x);
+    }
+
+    private void updateSelectedRangeUI() {
+        View parent = (View) selectedRangeView.getParent();
+        int parentWidth = parent.getWidth();
+
+        float leftX = leftHandle.getX();
+        float rightX = rightHandle.getX() + rightHandle.getWidth();
+
+        int width = (int) (rightX - leftX);
+        if (width < 0) width = 0;
+
+        selectedRangeView.setX(leftX);
+        selectedRangeView.getLayoutParams().width = width;
+        selectedRangeView.requestLayout();
+    }
 
     private String getSafeInputPath() throws Exception {
 
@@ -283,34 +318,35 @@ public class EditVideoActivity extends AppCompatActivity {
         endTimeText.setText(formatTime((int) endTrimMs));
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private void setupHandleDrag(View handle, boolean isLeft) {
 
         handle.setOnTouchListener((v, event) -> {
-            RelativeLayout parent = trimControls;
+            LinearLayout parent = trimControls;
             int parentWidth = parent.getWidth();
 
-            switch (event.getAction()) {
+            if (event.getAction() == MotionEvent.ACTION_MOVE) {
+                float x = event.getRawX() - parent.getX();
+                x = Math.max(0, Math.min(x, parentWidth));
 
-                case MotionEvent.ACTION_MOVE:
-                    float x = event.getRawX() - parent.getX();
-                    x = Math.max(0, Math.min(x, parentWidth));
+                if (isLeft) {
+                    float maxLeft = rightHandle.getX() - handle.getWidth();
+                    x = Math.min(x, maxLeft);
+                    handle.setX(x);
+                    startPercent = x / parentWidth;
+                } else {
+                    float minRight = leftHandle.getX() + leftHandle.getWidth();
+                    x = Math.max(x, minRight);
+                    handle.setX(x);
+                    endPercent = x / parentWidth;
+                }
 
-                    if (isLeft) {
-                        float maxLeft = rightHandle.getX() - handle.getWidth();
-                        x = Math.min(x, maxLeft);
-                        handle.setX(x);
-                        startPercent = x / parentWidth;
-                    } else {
-                        float minRight = leftHandle.getX() + leftHandle.getWidth();
-                        x = Math.max(x, minRight);
-                        handle.setX(x);
-                        endPercent = x / parentWidth;
-                    }
+                updateTrimPlayback();
+                updateTrimTimes();
+                updateSelectedRangeUI();
+                updatePlayheadPosition();
 
-                    updateTrimPlayback();
-                    updateTrimTimes();
-
-                    return true;
+                return true;
             }
             return true;
         });
@@ -378,17 +414,22 @@ public class EditVideoActivity extends AppCompatActivity {
 
     private void enterTrimMode() {
         currentUiMode = UiMode.TRIM;
-
+        selectedRangeView.post(this::updateSelectedRangeUI);
+        playheadView.post(() -> {
+            videoView.seekTo((int) startTrimMs);
+            updatePlayheadPosition();
+        });
         playbackControls.setVisibility(View.GONE);
         trimControls.setVisibility(View.VISIBLE);
+
+        videoView.pause();
+        playBtn.setImageResource(R.drawable.ic_play);
 
         List<Bitmap> thumbs = generateThumbnails();
         thumbnailRecycler.setAdapter(new VideoThumbnailAdapter(thumbs));
 
-
         setupHandleDrag(leftHandle, true);
         setupHandleDrag(rightHandle, false);
-
     }
 
 
@@ -407,12 +448,15 @@ public class EditVideoActivity extends AppCompatActivity {
 
     private void startUpdateSeekBar() {
         updateSeekBar = () -> {
-            seekBar.setProgress(videoView.getCurrentPosition());
+            int pos = videoView.getCurrentPosition();
+            seekBar.setProgress(pos);
             updateTimeDisplay();
-            handler.postDelayed(updateSeekBar, 500);
+            updatePlayheadPosition();
+            handler.postDelayed(updateSeekBar, 16); // ~60fps
         };
         handler.post(updateSeekBar);
     }
+
 
     private void updateTimeDisplay() {
         int current = videoView.getCurrentPosition();

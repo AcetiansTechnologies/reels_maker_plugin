@@ -56,19 +56,6 @@ public class NativeToastPlugin implements
                 result.success("Android " + android.os.Build.VERSION.RELEASE);
                 break;
 
-            case "showToast":
-                String message = call.argument("message");
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
-                result.success(null);
-                break;
-
-            case "openNativeScreen":
-                Intent screenIntent = new Intent(context, ShowToastActivity.class);
-                screenIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                context.startActivity(screenIntent);
-                result.success(null);
-                break;
-
             case "recordVideo":
                 if (activity == null) {
                     result.error("NO_ACTIVITY", "Activity is not attached", null);

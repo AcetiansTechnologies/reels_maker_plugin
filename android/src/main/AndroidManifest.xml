@@ -12,24 +12,12 @@
         android:maxSdkVersion="28" />
 
     <application>
-        <activity
-            android:name=".GalleryActivity"
-            android:exported="false"
 
-            android:theme="@style/PluginAppTheme" />
         <activity
             android:name=".CameraActivity"
             android:exported="false"
 
             android:theme="@style/PluginAppTheme" />
-        <activity
-            android:name=".CameraOptionsScreen"
-            android:exported="false"
-
-            android:theme="@style/PluginAppTheme" />
-        <activity
-            android:name=".ShowToastActivity"
-            android:exported="false" />
 
         <activity
             android:name=".EditVideoActivity"
