@@ -1,6 +1,5 @@
 package com.example.native_toast;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Intent;
@@ -11,12 +10,12 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -27,7 +26,6 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.media3.common.MediaItem;
-import androidx.media3.common.MimeTypes;
 import androidx.media3.common.Player;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.ExoPlayer;
@@ -68,7 +66,7 @@ public class EditVideoActivity extends AppCompatActivity {
     private float startPercent = 0f;
     private float endPercent = 1f;
 
-    private LinearLayout playbackControls; // Changed to LinearLayout
+    private LinearLayout playbackControls;
     private RecyclerView thumbnailRecycler;
 
     private LinearLayout trimControls;
@@ -122,7 +120,7 @@ public class EditVideoActivity extends AppCompatActivity {
         playbackControls = findViewById(R.id.playbackControls);
         trimControls = findViewById(R.id.trimControls);
         voiceOverControls = findViewById(R.id.voiceOverControls);
-        
+
         voiceRecordBtn = findViewById(R.id.voiceRecordBtn);
         voiceDeleteBtn = findViewById(R.id.voiceDeleteBtn);
         voiceStatusText = findViewById(R.id.voiceStatusText);
@@ -166,7 +164,7 @@ public class EditVideoActivity extends AppCompatActivity {
             }
             updatePlayPauseIcon();
         });
-        
+
         muteBtn.setOnClickListener(v -> toggleMute());
 
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -177,13 +175,19 @@ public class EditVideoActivity extends AppCompatActivity {
                     updateTimeDisplay();
                 }
             }
+
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) { isSeeking = true; }
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                isSeeking = true;
+            }
+
             @Override
-            public void onStopTrackingTouch(SeekBar seekBar) { isSeeking = false; }
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                isSeeking = false;
+            }
         });
 
-        backBtn.setOnClickListener(v -> onBackPressed());
+        backBtn.setOnClickListener(v -> handleBack());
         saveBtn.setOnClickListener(v -> startTrimExport());
         trimBtn.setOnClickListener(v -> enterTrimMode());
         voiceoverBtn.setOnClickListener(v -> enterVoiceMode());
@@ -202,14 +206,14 @@ public class EditVideoActivity extends AppCompatActivity {
             }
             updatePlayPauseIcon();
         });
-        
+
         voiceDeleteBtn.setOnClickListener(v -> {
             if (voiceOverPath != null) {
                 new File(voiceOverPath).delete();
                 voiceOverPath = null;
                 voiceStatusText.setText("Voice deleted. Tap mic to record.");
                 voiceDeleteBtn.setVisibility(View.GONE);
-                voiceRecordBtn.setImageResource(R.drawable.ic_mic); 
+                voiceRecordBtn.setImageResource(R.drawable.ic_mic);
             }
         });
     }
@@ -255,6 +259,7 @@ public class EditVideoActivity extends AppCompatActivity {
                     }
                 }
             }
+
             @Override
             public void onIsPlayingChanged(boolean isPlaying) {
                 updatePlayPauseIcon();
@@ -277,7 +282,7 @@ public class EditVideoActivity extends AppCompatActivity {
             playBtn.setImageResource(R.drawable.ic_play);
         }
     }
-    
+
     private void toggleMute() {
         isMuted = !isMuted;
         if (player != null) {
@@ -286,11 +291,11 @@ public class EditVideoActivity extends AppCompatActivity {
         // Assuming ic_music means sound ON, maybe ic_volume_off needed for mute?
         // Using tint or alpha for now as standard icons might differ
         if (isMuted) {
-             muteBtn.setAlpha(0.5f);
-             muteBtn.setImageResource(R.drawable.ic_no_music); // Ideally use ic_music_off if available
+            muteBtn.setAlpha(0.5f);
+            muteBtn.setImageResource(R.drawable.ic_no_music); // Ideally use ic_music_off if available
         } else {
-             muteBtn.setAlpha(1.0f);
-             muteBtn.setImageResource(R.drawable.ic_music); 
+            muteBtn.setAlpha(1.0f);
+            muteBtn.setImageResource(R.drawable.ic_music);
         }
     }
 
@@ -302,7 +307,7 @@ public class EditVideoActivity extends AppCompatActivity {
         playbackControls.setVisibility(View.GONE);
         trimControls.setVisibility(View.VISIBLE);
         playheadView.setVisibility(View.VISIBLE);
-        
+
         if (player != null) {
             player.pause();
             if (endTrimMs == 0) endTrimMs = videoDurationMs;
@@ -310,24 +315,24 @@ public class EditVideoActivity extends AppCompatActivity {
         }
         initTrimThumbnailsAndHandles();
     }
-    
+
     private void enterVoiceMode() {
         currentUiMode = UiMode.VOICE;
         trimControls.setVisibility(View.GONE);
-        playbackControls.setVisibility(View.VISIBLE); 
+        playbackControls.setVisibility(View.VISIBLE);
         voiceOverControls.setVisibility(View.VISIBLE);
         playheadView.setVisibility(View.GONE);
 
         if (player != null) {
             player.pause();
         }
-        
+
         if (voiceOverPath != null && new File(voiceOverPath).exists()) {
-             voiceDeleteBtn.setVisibility(View.VISIBLE);
-             voiceStatusText.setText("Voice recorded.");
+            voiceDeleteBtn.setVisibility(View.VISIBLE);
+            voiceStatusText.setText("Voice recorded.");
         } else {
-             voiceDeleteBtn.setVisibility(View.GONE);
-             voiceStatusText.setText("Tap mic to record");
+            voiceDeleteBtn.setVisibility(View.GONE);
+            voiceStatusText.setText("Tap mic to record");
         }
     }
 
@@ -337,7 +342,7 @@ public class EditVideoActivity extends AppCompatActivity {
         trimControls.setVisibility(View.GONE);
         voiceOverControls.setVisibility(View.GONE);
         playheadView.setVisibility(View.GONE);
-        
+
         handler.removeCallbacks(trimLoopRunnable);
         if (player != null) updatePlayPauseIcon();
     }
@@ -346,27 +351,27 @@ public class EditVideoActivity extends AppCompatActivity {
 
     private void startVoiceRecording() {
         if (player == null) return;
-        
+
         if (voiceOverPath != null && new File(voiceOverPath).exists()) {
-            new File(voiceOverPath).delete(); 
+            new File(voiceOverPath).delete();
         }
-        
+
         voiceOverPath = new File(getExternalFilesDir(null), "voice_temp.aac").getAbsolutePath();
         voiceStartMs = player.getCurrentPosition();
-        
+
         mediaRecorder = new MediaRecorder();
         mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.AAC_ADTS);
         mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         mediaRecorder.setOutputFile(voiceOverPath);
-        
+
         try {
             mediaRecorder.prepare();
             mediaRecorder.start();
             isRecordingVoice = true;
             voiceStatusText.setText("Recording...");
-            voiceRecordBtn.setColorFilter(0xFFFF0000); 
-            
+            voiceRecordBtn.setColorFilter(0xFFFF0000);
+
         } catch (IOException e) {
             e.printStackTrace();
             Toast.makeText(this, "Recording failed", Toast.LENGTH_SHORT).show();
@@ -384,7 +389,7 @@ public class EditVideoActivity extends AppCompatActivity {
             }
             mediaRecorder = null;
             isRecordingVoice = false;
-            
+
             voiceStatusText.setText("Voice recorded");
             voiceRecordBtn.clearColorFilter();
             voiceDeleteBtn.setVisibility(View.VISIBLE);
@@ -404,74 +409,68 @@ public class EditVideoActivity extends AppCompatActivity {
         String inputPath = (videoPath != null) ? videoPath : getSafeInputPath();
         File inputFile = new File(inputPath);
         String outputPath = getOutputPath();
-        
+
         // Cleanup old files
         cleanupStorage(inputFile);
 
         // --- Config ---
         boolean hasVoiceOver = (voiceOverPath != null && new File(voiceOverPath).exists());
-        
+
         // User Logic for Mute/KeepOriginal:
         // 1. If Global Mute is ON (isMuted) -> Remove Main Audio.
         // 2. If Voice Over is ON and "Keep Original" is OFF -> Remove Main Audio.
         boolean removeMainAudio = isMuted;
         if (!removeMainAudio && hasVoiceOver) {
-             if (!voiceMixBox.isChecked()) {
-                 removeMainAudio = true; // "Keep only voice over"
-             }
+            if (!voiceMixBox.isChecked()) {
+                removeMainAudio = true; // "Keep only voice over"
+            }
         }
 
         // --- Build Composition ---
-        
+
         MediaItem videoItem = MediaItem.fromUri(inputPath);
-        
-        MediaItem.ClippingConfiguration clipping = new MediaItem.ClippingConfiguration.Builder()
-                .setStartPositionMs(startTrimMs)
-                .setEndPositionMs(endTrimMs)
-                .build();
-        
-        EditedMediaItem videoEditedItem = new EditedMediaItem.Builder(videoItem.buildUpon().setClippingConfiguration(clipping).build())
-                .setRemoveAudio(removeMainAudio)
-                .build();
+
+        MediaItem.ClippingConfiguration clipping = new MediaItem.ClippingConfiguration.Builder().setStartPositionMs(startTrimMs).setEndPositionMs(endTrimMs).build();
+
+        EditedMediaItem videoEditedItem = new EditedMediaItem.Builder(videoItem.buildUpon().setClippingConfiguration(clipping).build()).setRemoveAudio(removeMainAudio).build();
 
         // 2. Sequences
         List<EditedMediaItemSequence> sequences = new ArrayList<>();
         sequences.add(new EditedMediaItemSequence.Builder(videoEditedItem).build());
-        
+
         if (hasVoiceOver) {
-             MediaItem voiceItem = MediaItem.fromUri(voiceOverPath);
-             EditedMediaItem voiceEditedItem = new EditedMediaItem.Builder(voiceItem).build();
-             sequences.add(new EditedMediaItemSequence.Builder(voiceEditedItem).build());
+            MediaItem voiceItem = MediaItem.fromUri(voiceOverPath);
+            EditedMediaItem voiceEditedItem = new EditedMediaItem.Builder(voiceItem).build();
+            sequences.add(new EditedMediaItemSequence.Builder(voiceEditedItem).build());
         }
 
         Composition composition = new Composition.Builder(sequences).build();
 
-        transformer = new Transformer.Builder(this)
-                .addListener(new Transformer.Listener() {
-                    @Override
-                    public void onCompleted(Composition composition, ExportResult exportResult) {
-                         runOnUiThread(() -> {
-                            if (progressDialog != null) progressDialog.dismiss();
-                            if (inputFile.exists()) inputFile.delete();
-                            if (voiceOverPath != null) new File(voiceOverPath).delete();
-                            finishWithResult(outputPath);
-                        });
-                    }
-                    @Override
-                    public void onError(Composition composition, ExportResult exportResult, ExportException exportException) {
-                        runOnUiThread(() -> {
-                            if (progressDialog != null) progressDialog.dismiss();
-                            Toast.makeText(EditVideoActivity.this, "Export Failed: " + exportException.getMessage(), Toast.LENGTH_LONG).show();
-                        });
-                    }
-                })
-                .build();
+        transformer = new Transformer.Builder(this).addListener(new Transformer.Listener() {
+            @Override
+            public void onCompleted(Composition composition, ExportResult exportResult) {
+                runOnUiThread(() -> {
+                    if (progressDialog != null) progressDialog.dismiss();
+                    if (inputFile.exists()) inputFile.delete();
+                    if (voiceOverPath != null) new File(voiceOverPath).delete();
+                    finishWithResult(outputPath);
+                });
+            }
+
+            @Override
+            public void onError(Composition composition, ExportResult exportResult, ExportException exportException) {
+                runOnUiThread(() -> {
+                    if (progressDialog != null) progressDialog.dismiss();
+                    Toast.makeText(EditVideoActivity.this, "Export Failed: " + exportException.getMessage(), Toast.LENGTH_LONG).show();
+                });
+            }
+        }).build();
 
         transformer.start(composition, outputPath);
     }
-    
+
     // ... helpers ...
-    
+
     private void finishWithResult(String finalPath) {
         if (finalPath == null || finalPath.isEmpty()) {
             setResult(Activity.RESULT_CANCELED);
@@ -482,7 +481,7 @@ public class EditVideoActivity extends AppCompatActivity {
         }
         finish();
     }
-    
+
     private void cleanupStorage(File keepFile) {
         File dir = getExternalFilesDir(android.os.Environment.DIRECTORY_MOVIES);
         if (dir != null && dir.exists()) {
@@ -496,29 +495,33 @@ public class EditVideoActivity extends AppCompatActivity {
         File oldTrimDir = new File(getExternalFilesDir(null), "trimmed");
         if (oldTrimDir.exists()) deleteRecursive(oldTrimDir);
     }
+
     private void deleteRecursive(File f) {
         if (f.isDirectory()) for (File c : f.listFiles()) deleteRecursive(c);
         f.delete();
     }
+
     private String getOutputPath() {
         File dir = getExternalFilesDir(android.os.Environment.DIRECTORY_MOVIES);
         if (!dir.exists()) dir.mkdirs();
         return new File(dir, "FINAL_" + System.currentTimeMillis() + ".mp4").getAbsolutePath();
     }
+
     private String getSafeInputPath() {
         if (videoPath != null) return videoPath;
         try {
             File temp = new File(getCacheDir(), "input_temp.mp4");
-            try (InputStream in = getContentResolver().openInputStream(Uri.parse(videoUri)); 
-                 OutputStream out = new FileOutputStream(temp)) {
+            try (InputStream in = getContentResolver().openInputStream(Uri.parse(videoUri)); OutputStream out = new FileOutputStream(temp)) {
                 byte[] buffer = new byte[4096];
                 int read;
                 while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
             }
             return temp.getAbsolutePath();
-        } catch (Exception e) { return null; }
+        } catch (Exception e) {
+            return null;
+        }
     }
-    
+
     private void updatePlayheadPosition() {
         if (videoDurationMs <= 0) return;
         View parent = (View) playheadView.getParent();
@@ -528,6 +531,7 @@ public class EditVideoActivity extends AppCompatActivity {
         float percent = current / (float) videoDurationMs;
         playheadView.setX(percent * parentWidth);
     }
+
     private void updateSelectedRangeUI() {
         View parent = (View) selectedRangeView.getParent();
         int parentWidth = parent.getWidth();
@@ -540,6 +544,7 @@ public class EditVideoActivity extends AppCompatActivity {
         selectedRangeView.getLayoutParams().width = width;
         selectedRangeView.requestLayout();
     }
+
     private void updateTrimTimes() {
         int width = trimControls.getWidth();
         if (width == 0) return;
@@ -555,27 +560,29 @@ public class EditVideoActivity extends AppCompatActivity {
         startTimeText.setText(formatTime((int) startTrimMs));
         endTimeText.setText(formatTime((int) endTrimMs));
     }
+
     private void initTrimThumbnailsAndHandles() {
         new Thread(() -> {
             List<Bitmap> thumbs = generateThumbnails();
             runOnUiThread(() -> {
-                 thumbnailRecycler.setAdapter(new VideoThumbnailAdapter(thumbs));
-                 trimControls.post(() -> {
-                     int width = trimControls.getWidth();
-                     if (width > 0 && videoDurationMs > 0) {
-                        float startX = (startTrimMs / (float)videoDurationMs) * width;
-                        float endX = (endTrimMs / (float)videoDurationMs) * width;
-                        endX = endX - rightHandle.getWidth(); 
+                thumbnailRecycler.setAdapter(new VideoThumbnailAdapter(thumbs));
+                trimControls.post(() -> {
+                    int width = trimControls.getWidth();
+                    if (width > 0 && videoDurationMs > 0) {
+                        float startX = (startTrimMs / (float) videoDurationMs) * width;
+                        float endX = (endTrimMs / (float) videoDurationMs) * width;
+                        endX = endX - rightHandle.getWidth();
                         leftHandle.setX(startX);
                         rightHandle.setX(endX);
                         updateSelectedRangeUI();
-                     }
-                 });
+                    }
+                });
             });
         }).start();
         setupHandleDrag(leftHandle, true);
         setupHandleDrag(rightHandle, false);
     }
+
     private void setupHandleDrag(View handle, boolean isLeft) {
         handle.setOnTouchListener((v, event) -> {
             LinearLayout parent = trimControls;
@@ -585,31 +592,42 @@ public class EditVideoActivity extends AppCompatActivity {
                 x = Math.max(0, Math.min(x, parentWidth - handle.getWidth()));
                 if (isLeft) {
                     float maxLeft = rightHandle.getX() - handle.getWidth();
-                    maxLeft = Math.min(maxLeft, rightHandle.getX() - 30); 
+                    maxLeft = Math.min(maxLeft, rightHandle.getX() - 30);
                     x = Math.min(x, maxLeft);
                     handle.setX(x);
                     updateTrimTimes();
-                    if (player != null) { player.seekTo(startTrimMs); player.pause(); }
+                    if (player != null) {
+                        player.seekTo(startTrimMs);
+                        player.pause();
+                    }
                 } else {
                     float minRight = leftHandle.getX() + leftHandle.getWidth();
                     minRight = Math.max(minRight, leftHandle.getX() + 30 + leftHandle.getWidth());
                     x = Math.max(x, minRight);
                     handle.setX(x);
                     updateTrimTimes();
-                    if (player != null) { player.seekTo(endTrimMs); player.pause(); }
+                    if (player != null) {
+                        player.seekTo(endTrimMs);
+                        player.pause();
+                    }
                 }
                 updateSelectedRangeUI();
                 updatePlayheadPosition();
                 return true;
             }
             if (event.getAction() == MotionEvent.ACTION_UP) {
-                 if (player != null) { player.seekTo(startTrimMs); player.play(); }
+                if (player != null) {
+                    player.seekTo(startTrimMs);
+                    player.play();
+                }
             }
             return true;
         });
     }
+
     private final Runnable trimLoopRunnable = new Runnable() {
-        @Override public void run() {
+        @Override
+        public void run() {
             if (currentUiMode == UiMode.TRIM && player != null && player.isPlaying()) {
                 long current = player.getCurrentPosition();
                 if (current >= endTrimMs) player.seekTo(startTrimMs);
@@ -618,6 +636,7 @@ public class EditVideoActivity extends AppCompatActivity {
             }
         }
     };
+
     private List<Bitmap> generateThumbnails() {
         List<Bitmap> list = new ArrayList<>();
         MediaMetadataRetriever retriever = new MediaMetadataRetriever();
@@ -627,7 +646,7 @@ public class EditVideoActivity extends AppCompatActivity {
             String durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
             if (durationStr == null) return list;
             long durationMs = Long.parseLong(durationStr);
-            int count = 8; 
+            int count = 8;
             long interval = durationMs / count;
             for (int i = 0; i < count; i++) {
                 Bitmap bmp = retriever.getFrameAtTime(i * interval * 1000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
@@ -637,12 +656,20 @@ public class EditVideoActivity extends AppCompatActivity {
                     if (bmp != scaled) bmp.recycle();
                 }
             }
-        } catch (Exception e) {} finally { try { retriever.release(); } catch (IOException e) {} }
+        } catch (Exception e) {
+        } finally {
+            try {
+                retriever.release();
+            } catch (IOException e) {
+            }
+        }
         return list;
     }
+
     private void startUpdateSeekBar() {
         updateSeekBar = new Runnable() {
-            @Override public void run() {
+            @Override
+            public void run() {
                 if (player != null && player.isPlaying()) {
                     if (!isSeeking) seekBar.setProgress((int) player.getCurrentPosition());
                     updateTimeDisplay();
@@ -653,13 +680,15 @@ public class EditVideoActivity extends AppCompatActivity {
         };
         handler.post(updateSeekBar);
     }
+
     private void updateTimeDisplay() {
         if (player == null) return;
         long current = player.getCurrentPosition();
         long total = player.getDuration();
         if (total < 0) total = 0;
-        timeDisplay.setText(String.format(Locale.getDefault(), "%s / %s", formatTime((int)current), formatTime((int)total)));
+        timeDisplay.setText(String.format(Locale.getDefault(), "%s / %s", formatTime((int) current), formatTime((int) total)));
     }
+
     private String formatTime(int millis) {
         if (millis < 0) return "0:00";
         int totalSeconds = millis / 1000;
@@ -667,15 +696,29 @@ public class EditVideoActivity extends AppCompatActivity {
         int seconds = totalSeconds % 60;
         return String.format(Locale.getDefault(), "%d:%02d", minutes, seconds);
     }
-    @Override public void onBackPressed() {
-        if (currentUiMode != UiMode.NORMAL) { exitToNormalMode(); return; }
-        if (player != null) player.stop();
-        startActivity(new Intent(this, CameraActivity.class));
-        finish();
+    private void handleBack() {
+        if (currentUiMode != UiMode.NORMAL) {
+            exitToNormalMode();
+        } else {
+            if (player != null) player.stop();
+            startActivity(new Intent(this, CameraActivity.class));
+            finish();
+        }
     }
-    @Override protected void onDestroy() {
+
+    @Override
+    public void onBackPressed() {
+        handleBack();
+    }
+
+
+    @Override
+    protected void onDestroy() {
         super.onDestroy();
-        if (player != null) { player.release(); player = null; }
+        if (player != null) {
+            player.release();
+            player = null;
+        }
         handler.removeCallbacksAndMessages(null);
     }
 }
