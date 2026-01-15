@@ -1,6 +1,21 @@
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <solid android:color="@android:color/white"/>
-    <corners
-        android:topLeftRadius="12dp"
-        android:bottomLeftRadius="12dp"/>
-</shape>
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The main vertical bar -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFFFF" />
+            <corners 
+                android:topLeftRadius="4dp"
+                android:bottomLeftRadius="4dp" />
+            <size android:width="14dp" />
+        </shape>
+    </item>
+    <!-- Inner part to make it look like a bracket (optional, or just solid) -->
+    <!-- For a simple "Best" look, a thick solid bar with an icon or just simple white pill is often standard. 
+         Let's try a standard thick white handle with a small "grip" line in center. -->
+    <item android:left="4dp" android:right="4dp" android:top="20dp" android:bottom="20dp">
+         <shape android:shape="rectangle">
+             <solid android:color="#33000000" /> <!-- Subtle grip groove -->
+         </shape>
+    </item>
+</layer-list>

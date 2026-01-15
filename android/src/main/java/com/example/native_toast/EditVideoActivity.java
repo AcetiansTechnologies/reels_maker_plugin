@@ -39,6 +39,22 @@ import androidx.media3.ui.PlayerView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.view.Gravity;
+import android.view.ScaleGestureDetector;
+import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.RelativeLayout;
+import android.view.inputmethod.InputMethodManager;
+import android.graphics.Color;
+import android.graphics.Canvas;
+import androidx.media3.effect.Crop;
+import androidx.media3.effect.OverlayEffect;
+import androidx.media3.effect.BitmapOverlay;
+import androidx.media3.effect.TextureOverlay;
+import com.google.common.collect.ImmutableList;
+
+import android.graphics.drawable.GradientDrawable;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -52,7 +68,7 @@ import java.util.Locale;
 public class EditVideoActivity extends AppCompatActivity {
 
     enum UiMode {
-        NORMAL, TRIM, VOICE
+        NORMAL, TRIM, VOICE, CROP
     }
 
     private TextView startTimeText, endTimeText;
@@ -82,13 +98,19 @@ public class EditVideoActivity extends AppCompatActivity {
 
     private ImageButton playBtn, backBtn, saveBtn;
     private ImageButton muteBtn;
-    private ImageButton trimBtn, audioBtn, textBtn, voiceoverBtn, filtersBtn;
+    private ImageButton trimBtn, audioBtn, textBtn, voiceoverBtn, filtersBtn, cropBtn;
     private SeekBar seekBar;
     private TextView timeDisplay;
     private String videoPath;
     private String videoUri;
     private View selectedRangeView;
     private View playheadView;
+    
+    // Crop Variables
+    private FrameLayout cropContainer;
+    private CropOverlayView cropOverlayView;
+    private ImageButton cropDoneBtn;
+    private float[] normalizedCropRect = null; // null if no crop
 
     private Runnable updateSeekBar;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -102,6 +124,14 @@ public class EditVideoActivity extends AppCompatActivity {
     private String voiceOverPath = null;
     private boolean isRecordingVoice = false;
     private long voiceStartMs = 0;
+
+    // Text Overlay Variables
+    private FrameLayout textOverlayContainer;
+    private RelativeLayout textEditorLayout;
+    private EditText textEditorInput;
+    private ImageButton textBgToggleBtn, textDoneBtn;
+    private int currentTextBgMode = 0; // 0=None, 1=White, 2=Black
+    private InputMethodManager imm;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -149,6 +179,27 @@ public class EditVideoActivity extends AppCompatActivity {
         voiceoverBtn = findViewById(R.id.voiceoverBtn);
         filtersBtn = findViewById(R.id.filtersBtn);
 
+        // Text Overlay Init
+        textOverlayContainer = findViewById(R.id.textOverlayContainer);
+        textEditorLayout = findViewById(R.id.textEditorLayout);
+        textEditorInput = findViewById(R.id.textEditorInput);
+        textBgToggleBtn = findViewById(R.id.textBgToggleBtn);
+        textDoneBtn = findViewById(R.id.textDoneBtn);
+        imm = (InputMethodManager) getSystemService(Activity.INPUT_METHOD_SERVICE);
+
+        textBgToggleBtn.setOnClickListener(v -> toggleTextBackgroundMode());
+        textDoneBtn.setOnClickListener(v -> handleTextDone());
+
+        // Crop Init
+        cropContainer = findViewById(R.id.cropContainer);
+        cropOverlayView = findViewById(R.id.cropOverlayView);
+        cropDoneBtn = findViewById(R.id.cropDoneBtn);
+        cropBtn = findViewById(R.id.cropBtn);
+
+        cropBtn.setOnClickListener(v -> enterCropMode());
+        cropDoneBtn.setOnClickListener(v -> exitCropMode(true));
+        filtersBtn.setOnClickListener(v -> Toast.makeText(this, "Filters coming soon", Toast.LENGTH_SHORT).show());
+        
         setupPlayer();
 
         playBtn.setOnClickListener(v -> {
@@ -193,7 +244,7 @@ public class EditVideoActivity extends AppCompatActivity {
         voiceoverBtn.setOnClickListener(v -> enterVoiceMode());
 
         audioBtn.setOnClickListener(v -> Toast.makeText(this, "Audio editor coming soon", Toast.LENGTH_SHORT).show());
-        textBtn.setOnClickListener(v -> Toast.makeText(this, "Text editor coming soon", Toast.LENGTH_SHORT).show());
+        textBtn.setOnClickListener(v -> enterTextMode());
         filtersBtn.setOnClickListener(v -> Toast.makeText(this, "Filters coming soon", Toast.LENGTH_SHORT).show());
 
         voiceRecordBtn.setOnClickListener(v -> {
@@ -341,10 +392,31 @@ public class EditVideoActivity extends AppCompatActivity {
         playbackControls.setVisibility(View.VISIBLE);
         trimControls.setVisibility(View.GONE);
         voiceOverControls.setVisibility(View.GONE);
+        cropContainer.setVisibility(View.GONE);
         playheadView.setVisibility(View.GONE);
 
         handler.removeCallbacks(trimLoopRunnable);
         if (player != null) updatePlayPauseIcon();
+    }
+    
+    private void enterCropMode() {
+        currentUiMode = UiMode.CROP;
+        playbackControls.setVisibility(View.GONE);
+        trimControls.setVisibility(View.GONE);
+        voiceOverControls.setVisibility(View.GONE);
+        cropContainer.setVisibility(View.VISIBLE);
+        
+        if (player != null) {
+            player.pause();
+            updatePlayPauseIcon();
+        }
+    }
+    
+    private void exitCropMode(boolean save) {
+        if (save) {
+            normalizedCropRect = cropOverlayView.getNormalizedCrop();
+        }
+        exitToNormalMode();
     }
 
     // ============= VOICE RECORDING LOGIC =============
@@ -396,7 +468,158 @@ public class EditVideoActivity extends AppCompatActivity {
         }
     }
 
+    // ============= TEXT EDITOR LOGIC =============
+
+    private void enterTextMode() {
+        if (player != null && player.isPlaying()) {
+            player.pause();
+            updatePlayPauseIcon();
+        }
+        textEditorLayout.setVisibility(View.VISIBLE);
+        textEditorInput.setText("");
+        textEditorInput.requestFocus();
+        currentTextBgMode = 0;
+        updateTextEditorStyle();
+        // Show keyboard
+        if (imm != null) imm.showSoftInput(textEditorInput, InputMethodManager.SHOW_IMPLICIT);
+    }
+
+    private void toggleTextBackgroundMode() {
+        currentTextBgMode = (currentTextBgMode + 1) % 3;
+        updateTextEditorStyle();
+    }
+
+    private void updateTextEditorStyle() {
+        switch (currentTextBgMode) {
+            case 0: // None
+                textEditorInput.setTextColor(Color.WHITE);
+                textEditorInput.setBackground(null);
+                textBgToggleBtn.setImageResource(R.drawable.ic_mackeup); 
+                break;
+            case 1: // White
+                textEditorInput.setTextColor(Color.BLACK);
+                textEditorInput.setBackground(createRoundedBackground(Color.WHITE));
+                break;
+            case 2: // Black
+                textEditorInput.setTextColor(Color.WHITE);
+                textEditorInput.setBackground(createRoundedBackground(Color.BLACK));
+                break;
+        }
+    }
+
+    private void handleTextDone() {
+        String text = textEditorInput.getText().toString().trim();
+        if (!text.isEmpty()) {
+            addTextSticker(text, currentTextBgMode);
+        }
+        // Hide keyboard
+        if (imm != null) imm.hideSoftInputFromWindow(textEditorInput.getWindowToken(), 0);
+        textEditorLayout.setVisibility(View.GONE);
+    }
+
+    private void addTextSticker(String text, int bgMode) {
+        TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setTextSize(24);
+        tv.setGravity(Gravity.CENTER);
+        tv.setPadding(30, 20, 30, 20); // Increased padding for better look
+
+        // Apply style
+        if (bgMode == 0) {
+            tv.setTextColor(Color.WHITE);
+            tv.setBackground(null);
+        } else if (bgMode == 1) {
+            tv.setTextColor(Color.BLACK);
+            tv.setBackground(createRoundedBackground(Color.WHITE));
+        } else {
+            tv.setTextColor(Color.WHITE);
+            tv.setBackground(createRoundedBackground(Color.BLACK));
+        }
+
+        // Layout params (center initially)
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+        );
+        params.gravity = Gravity.CENTER;
+        tv.setLayoutParams(params);
+
+        textOverlayContainer.addView(tv);
+        
+        // Center the view in the container explicitly after layout
+        tv.post(() -> {
+            tv.setX((textOverlayContainer.getWidth() - tv.getWidth()) / 2f);
+            tv.setY((textOverlayContainer.getHeight() - tv.getHeight()) / 2f);
+        });
+        
+        setupStickerGestures(tv);
+    }
+    
+    private GradientDrawable createRoundedBackground(int color) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setShape(GradientDrawable.RECTANGLE);
+        drawable.setColor(color);
+        drawable.setCornerRadius(30f); // 30px radius
+        return drawable;
+    }
+
+    private void setupStickerGestures(View view) {
+        ScaleGestureDetector scaleDetector = new ScaleGestureDetector(this, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            @Override
+            public boolean onScale(ScaleGestureDetector detector) {
+                float scaleFactor = detector.getScaleFactor();
+                float newScaleX = view.getScaleX() * scaleFactor;
+                float newScaleY = view.getScaleY() * scaleFactor;
+                // Limit scale
+                newScaleX = Math.max(0.5f, Math.min(newScaleX, 5.0f));
+                newScaleY = Math.max(0.5f, Math.min(newScaleY, 5.0f));
+                view.setScaleX(newScaleX);
+                view.setScaleY(newScaleY);
+                return true;
+            }
+        });
+
+        view.setOnTouchListener(new View.OnTouchListener() {
+            float dX, dY;
+            float lastTouchX, lastTouchY;
+            boolean isDragging = false;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                scaleDetector.onTouchEvent(event);
+                if (scaleDetector.isInProgress()) return true;
+
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        dX = v.getX() - event.getRawX();
+                        dY = v.getY() - event.getRawY();
+                        lastTouchX = event.getRawX();
+                        lastTouchY = event.getRawY();
+                        isDragging = false;
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        if (Math.abs(event.getRawX() - lastTouchX) > 10 || Math.abs(event.getRawY() - lastTouchY) > 10) {
+                            isDragging = true;
+                            v.animate()
+                                    .x(event.getRawX() + dX)
+                                    .y(event.getRawY() + dY)
+                                    .setDuration(0)
+                                    .start();
+                        }
+                        break;
+                    case MotionEvent.ACTION_UP:
+                        if (!isDragging) {
+                            // Maybe edit text again on click? (Optional)
+                        }
+                        break;
+                }
+                return true;
+            }
+        });
+    }
+
     // ============= EXPORT LOGIC =============
+
 
     private void startTrimExport() {
         if (player != null && player.isPlaying()) player.pause();
@@ -432,7 +655,61 @@ public class EditVideoActivity extends AppCompatActivity {
 
         MediaItem.ClippingConfiguration clipping = new MediaItem.ClippingConfiguration.Builder().setStartPositionMs(startTrimMs).setEndPositionMs(endTrimMs).build();
 
-        EditedMediaItem videoEditedItem = new EditedMediaItem.Builder(videoItem.buildUpon().setClippingConfiguration(clipping).build()).setRemoveAudio(removeMainAudio).build();
+        EditedMediaItem.Builder videoEditedItemBuilder = new EditedMediaItem.Builder(videoItem.buildUpon().setClippingConfiguration(clipping).build()).setRemoveAudio(removeMainAudio);
+
+        // ADD EFFECTS
+        ImmutableList.Builder<androidx.media3.common.Effect> effectsBuilder = new ImmutableList.Builder<>();
+        
+        // 1. Crop Effect
+        if (normalizedCropRect != null) {
+            // Mapping Normalized [L, T, R, B] to Pixel Coordinates? 
+            // Effect Crop(left, right, bottom, top) relative to input values.
+            // Crop(float left, float right, float bottom, float top) constructor takes values in range -1 to 1 for normalized? 
+            // No, Media3 Crop doc says: "The values are in the range [-1, 1], where (-1, -1) corresponds to the bottom-left corner".
+            // Wait, let's verify Media3 Crop API.
+            // "Crop(float left, float right, float bottom, float top)" -> "Removes the outer portion of the frame."
+            // "The coordinates are normalized to the interval [-1, 1], with (-1, -1) being the bottom-left corner."
+            
+            // My UI returns 0..1 where (0,0) is TOP-LEFT, (1,1) is BOTTOM-RIGHT.
+            // Map UI(0..1) to GL(-1..1):
+            // x_gl = x_ui * 2 - 1
+            // y_gl = (1 - y_ui) * 2 - 1  (Y is flipped in GL usually)
+            
+            float leftUi = normalizedCropRect[0];
+            float topUi = normalizedCropRect[1];
+            float rightUi = normalizedCropRect[2];
+            float bottomUi = normalizedCropRect[3];
+            
+            float leftGl = leftUi * 2 - 1;
+            float rightGl = rightUi * 2 - 1;
+            // Top in UI (0) -> Top in GL (1). Bottom in UI (1) -> Bottom in GL (-1).
+            float topGl = (1 - topUi) * 2 - 1; 
+            float bottomGl = (1 - bottomUi) * 2 - 1;
+            
+            // Constructor: Crop(float left, float right, float bottom, float top)
+            effectsBuilder.add(new Crop(leftGl, rightGl, bottomGl, topGl));
+        }
+
+        // 2. Overlay Effect
+        if (textOverlayContainer.getChildCount() > 0) {
+            Bitmap overlayBitmap = createBitmapFromView(textOverlayContainer);
+            if (overlayBitmap != null) {
+                try {
+                   BitmapOverlay bitmapOverlay = BitmapOverlay.createStaticBitmapOverlay(overlayBitmap);
+                   effectsBuilder.add(new OverlayEffect(ImmutableList.of(bitmapOverlay)));
+                } catch (Exception e) {
+                   e.printStackTrace();
+                }
+            }
+        }
+        
+        // Correct usage for Transformer:
+        videoEditedItemBuilder.setEffects(new androidx.media3.transformer.Effects(
+               ImmutableList.of(),
+               effectsBuilder.build()
+        ));
+        
+        EditedMediaItem videoEditedItem = videoEditedItemBuilder.build();
 
         // 2. Sequences
         List<EditedMediaItemSequence> sequences = new ArrayList<>();
@@ -711,6 +988,14 @@ public class EditVideoActivity extends AppCompatActivity {
         handleBack();
     }
 
+
+    private Bitmap createBitmapFromView(View view) {
+        if (view.getWidth() == 0 || view.getHeight() == 0) return null;
+        Bitmap bitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(), Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        view.draw(canvas);
+        return bitmap;
+    }
 
     @Override
     protected void onDestroy() {

@@ -1,10 +1,23 @@
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <solid android:color="@android:color/transparent"/>
-
-    <stroke
-        android:width="2dp"
-        android:color="#FFFFFFFF"/>
-
-    <corners android:radius="12dp"/>
-</shape>
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Top Border -->
+    <item android:top="0dp" android:height="2dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFFFF" />
+        </shape>
+    </item>
+    
+    <!-- Bottom Border -->
+    <item android:bottom="0dp" android:height="2dp" android:gravity="bottom">
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFFFF" />
+        </shape>
+    </item>
+    
+    <!-- Main transparent fill (dimmed slightly less than outside? or fully clear) -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#20FFFFFF" /> <!-- Slight highlight for selection -->
+        </shape>
+    </item>
+</layer-list>

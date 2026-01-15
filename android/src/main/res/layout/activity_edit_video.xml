@@ -71,6 +71,104 @@
             android:padding="12dp"
             android:src="@drawable/ic_play"
             android:tint="@android:color/white" />
+
+        <!-- 3. Text Overlay Container (Transparent layer for Stickers) -->
+        <FrameLayout
+            android:id="@+id/textOverlayContainer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent" />
+
+        <!-- 4. Text Editor Input (Hidden by default) -->
+        <RelativeLayout
+            android:id="@+id/textEditorLayout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#99000000"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="gone">
+
+            <!-- Top Bar for Editor -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp">
+
+                <ImageButton
+                    android:id="@+id/textBgToggleBtn"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_centerHorizontal="true"
+                    android:background="@drawable/btn_bg_sq"
+                    android:src="@drawable/ic_mackeup"
+                    android:tint="@android:color/white"
+                    android:contentDescription="Toggle Background" />
+
+                <ImageButton
+                    android:id="@+id/textDoneBtn"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_alignParentEnd="true"
+                    android:background="@drawable/btn_bg_sq"
+                    android:src="@drawable/ic_arrow_go"
+                    android:padding="12dp"
+                    android:tint="@android:color/white"
+                    android:contentDescription="Done" />
+            </RelativeLayout>
+
+            <EditText
+                android:id="@+id/textEditorInput"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxWidth="320dp"
+                android:layout_centerInParent="true"
+                android:background="@null"
+                android:fontFamily="sans-serif-medium"
+                android:gravity="center"
+                android:hint="Type something..."
+                android:imeOptions="actionDone"
+                android:inputType="textMultiLine|textNoSuggestions"
+                android:padding="32dp"
+                android:textColor="@android:color/white"
+                android:textColorHint="#CCCCCC"
+                android:textSize="24sp" />
+
+        </RelativeLayout>
+
+        <!-- 5. Crop Overlay Container (Hidden by default) -->
+        <FrameLayout
+            android:id="@+id/cropContainer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+            
+            <com.example.native_toast.CropOverlayView
+                android:id="@+id/cropOverlayView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+                
+             <!-- Crop Controls Bottom Bar (Inside container) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:background="#99000000"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:gravity="end">
+                
+                <ImageButton
+                    android:id="@+id/cropDoneBtn"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="@drawable/btn_bg_sq"
+                    android:src="@drawable/ic_arrow_go"
+                    android:padding="12dp"
+                    android:tint="@android:color/white"
+                    android:contentDescription="Done Cropping" />
+            </LinearLayout>
+        </FrameLayout>
     </RelativeLayout>
 
 
@@ -386,6 +484,33 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="Voice"
+                android:textColor="@android:color/white"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Crop Button -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageButton
+                android:id="@+id/cropBtn"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:background="@drawable/btn_bg_sq"
+                android:contentDescription="Crop"
+                android:padding="16dp"
+                android:src="@drawable/ic_crop"
+                android:tint="@android:color/white" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Crop"
                 android:textColor="@android:color/white"
                 android:textSize="12sp" />
         </LinearLayout>
