@@ -101,7 +101,7 @@
                     android:layout_height="48dp"
                     android:layout_centerHorizontal="true"
                     android:background="@drawable/btn_bg_sq"
-                    android:src="@drawable/ic_mackeup"
+                    android:src="@drawable/ic_background"
                     android:tint="@android:color/white"
                     android:contentDescription="Toggle Background" />
 
@@ -110,8 +110,8 @@
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:layout_alignParentEnd="true"
-                    android:background="@drawable/btn_bg_sq"
-                    android:src="@drawable/ic_arrow_go"
+                    android:background="@drawable/btn_bg_green"
+                    android:src="@drawable/ic_check"
                     android:padding="12dp"
                     android:tint="@android:color/white"
                     android:contentDescription="Done" />
@@ -494,6 +494,7 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
             android:gravity="center"
+            android:visibility="gone"
             android:orientation="vertical">
 
             <ImageButton
@@ -524,8 +525,8 @@
 
             <ImageButton
                 android:id="@+id/filtersBtn"
-                android:layout_width="52dp"
-                android:layout_height="52dp"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
                 android:background="@drawable/btn_bg_sq"
                 android:contentDescription="Filters"
                 android:padding="16dp"
