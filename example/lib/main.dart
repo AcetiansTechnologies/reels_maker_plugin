@@ -135,6 +135,41 @@ class _MyAppState extends State<MyApp> {
                       ),
                     ),
                     const SizedBox(width: 12),
+                    FutureBuilder<File?>(
+                      future: _videoFuture,
+                      builder: (context, snapshot) {
+                        final file = snapshot.data;
+                        return TextButton(
+                          style: TextButton.styleFrom(
+                            backgroundColor: file != null ? Colors.green : Colors.grey,
+                          ),
+                          onPressed: file != null
+                              ? () async {
+                                  const channel = MethodChannel('native_toast');
+                                  try {
+                                    debugPrint("Opening video editor for: ${file.path}");
+                                    final result = await channel.invokeMethod(
+                                      'editVideo',
+                                      {'videoPath': file.path},
+                                    );
+                                    debugPrint("Edit result: $result");
+                                    if (result != null && result['videoPath'] != null) {
+                                      await setVideoFile(result['videoPath']);
+                                      debugPrint("Edited video path: ${result['videoPath']}");
+                                    }
+                                  } on PlatformException catch (e) {
+                                    debugPrint("Edit error: ${e.code} - ${e.message}");
+                                  }
+                                }
+                              : null,
+                          child: const Text(
+                            'Edit Video',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 12),
                     TextButton(
                       onPressed: () {
                         // Add post video logic

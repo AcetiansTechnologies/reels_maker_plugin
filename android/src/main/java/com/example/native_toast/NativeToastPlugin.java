@@ -37,6 +37,7 @@ public class NativeToastPlugin implements
     public static MethodChannel.Result pendingResult;
 
     private static final int RECORD_VIDEO_REQUEST_CODE = 101;
+    private static final int EDIT_VIDEO_REQUEST_CODE = 102;
 
     // Called when plugin is attached to Flutter engine
     @Override
@@ -71,6 +72,23 @@ public class NativeToastPlugin implements
                 Intent cameraActivityIntent = new Intent(context, CameraActivity.class);
                 cameraActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 context.startActivity(cameraActivityIntent);
+                break;
+
+            case "editVideo":
+                if (activity == null) {
+                    result.error("NO_ACTIVITY", "Activity is not attached", null);
+                    return;
+                }
+                String videoPath = call.argument("videoPath");
+                if (videoPath == null || videoPath.isEmpty()) {
+                    result.error("INVALID_PATH", "Video path is required", null);
+                    return;
+                }
+                pendingResult = result;
+                Intent editIntent = new Intent(activity, EditVideoActivity.class);
+                editIntent.putExtra("video_path", videoPath);
+                activity.startActivityForResult(editIntent, EDIT_VIDEO_REQUEST_CODE);
+                break;
 
             default:
                 result.notImplemented();
@@ -87,19 +105,32 @@ public class NativeToastPlugin implements
     // Receives result from CameraActivity
     @Override
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == RECORD_VIDEO_REQUEST_CODE) {
+        if (requestCode == RECORD_VIDEO_REQUEST_CODE || requestCode == EDIT_VIDEO_REQUEST_CODE) {
 
             if (pendingResult == null) return true;
 
             if (resultCode == Activity.RESULT_OK && data != null) {
-                Uri videoUri = data.getData();
-                pendingResult.success(
-                        videoUri != null ? videoUri.toString() : null
-                );
+                // Check for resultPath (from EditVideoActivity)
+                String resultPath = data.getStringExtra("resultPath");
+                if (resultPath != null) {
+                    java.util.Map<String, Object> resultMap = new java.util.HashMap<>();
+                    resultMap.put("videoPath", resultPath);
+                    pendingResult.success(resultMap);
+                } else {
+                    // Check for URI (from CameraActivity)
+                    Uri videoUri = data.getData();
+                    if (videoUri != null) {
+                        java.util.Map<String, Object> resultMap = new java.util.HashMap<>();
+                        resultMap.put("videoPath", videoUri.toString());
+                        pendingResult.success(resultMap);
+                    } else {
+                        pendingResult.success(null);
+                    }
+                }
             } else {
                 pendingResult.error(
-                        "RECORDING_FAILED",
-                        "Video recording cancelled or failed",
+                        "OPERATION_FAILED",
+                        "Video operation cancelled or failed",
                         null
                 );
             }
